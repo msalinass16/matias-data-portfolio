@@ -143,12 +143,26 @@ tr:hover td{background:rgba(255,255,255,.025)}
 .hm-md{background:rgba(255,140,0,.3);color:var(--amber)}
 .hm-hi{background:rgba(208,2,27,.3);color:#ff4757}
 
-/* ── MILESTONE LIST ── */
-.ms-row{padding:13px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:2fr 90px 90px 130px 90px;align-items:center;gap:14px}
+/* ── PHASE SUMMARY CARDS ── */
+.phase-cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.phase-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;min-width:130px;flex:1;position:relative;overflow:hidden}
+.phase-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--yellow)}
+.phase-card.pc-done::before{background:var(--green)}
+.phase-card.pc-warn::before{background:var(--amber)}
+.phase-card.pc-bad::before{background:var(--red)}
+.phase-card.pc-pend::before{background:var(--border)}
+.ph-name{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.ph-pct{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
+.ph-base{font-size:11px;color:var(--gray);margin-bottom:6px}
+.ph-delta{font-size:11px;font-weight:600}
+.ph-acts{font-size:10px;color:var(--gray)}
+
+/* ── ACTIVITY LIST ── */
+.ms-row{padding:12px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:2.5fr 90px 100px 170px 90px;align-items:center;gap:12px}
 .ms-row:last-child{border-bottom:none}
 .ms-name{font-size:13px;font-weight:500}
-.ms-date{font-size:12px;color:var(--gray)}
-.ms-pct-lbl{font-size:10px;color:var(--gray);text-align:right;margin-top:2px}
+.ms-meta{font-size:11px;color:var(--gray)}
+.ms-pct-lbl{font-size:10px;color:var(--gray);margin-top:3px;display:flex;justify-content:space-between}
 
 /* ── STAT BOX ── */
 .stat-box{background:rgba(0,0,0,.2);border-radius:5px;padding:14px;text-align:center;border:1px solid var(--border)}
@@ -353,20 +367,21 @@ tr:hover td{background:rgba(255,255,255,.025)}
     <div class="view" id="view-cronograma">
       <div class="sec-hdr">
         <div class="sec-title">Cronograma</div>
-        <div class="sec-sub">Hitos y avance del proyecto</div>
+        <div class="sec-sub">Actividades ponderadas — avance real vs. base planificado</div>
       </div>
       <div class="kpi-grid g4">
-        <div class="kpi-card cy"><div class="kpi-lbl">Avance General</div><div class="kpi-val" id="c-av">—<span class="unit">%</span></div></div>
-        <div class="kpi-card cg"><div class="kpi-lbl">Completados</div><div class="kpi-val" id="c-comp">—</div></div>
-        <div class="kpi-card cr"><div class="kpi-lbl">Retrasados</div><div class="kpi-val" id="c-ret">—</div></div>
+        <div class="kpi-card cy"><div class="kpi-lbl">Avance General</div><div class="kpi-val" id="c-av">—<span class="unit">%</span></div><div class="kpi-note" id="c-avsub"></div><div class="pbar"><div class="pbar-fill" id="c-avbar" style="background:var(--yellow);width:0%"></div></div></div>
+        <div class="kpi-card cg"><div class="kpi-lbl">Completadas</div><div class="kpi-val" id="c-comp">—</div></div>
+        <div class="kpi-card cr"><div class="kpi-lbl">Retrasadas</div><div class="kpi-val" id="c-ret">—</div></div>
         <div class="kpi-card cb"><div class="kpi-lbl">Pendientes</div><div class="kpi-val" id="c-pend">—</div></div>
       </div>
+      <div id="phaseSummary" class="phase-cards"></div>
       <div class="chart-card" style="margin-bottom:20px">
-        <div class="chart-title">Progreso por Hito</div>
-        <canvas id="chartCronograma" style="max-height:280px"></canvas>
+        <div class="chart-title">Avance Real vs. Base por actividad</div>
+        <canvas id="chartCronograma" style="max-height:360px"></canvas>
       </div>
       <div class="tbl-card">
-        <div class="tbl-hdr"><span>Detalle de Hitos</span></div>
+        <div class="tbl-hdr"><span>Detalle de Actividades</span></div>
         <div id="msList"></div>
       </div>
     </div>
@@ -413,7 +428,7 @@ tr:hover td{background:rgba(255,255,255,.025)}
 // DEMO DATA
 // ══════════════════════════════════════════════
 const DEMO = {
-  config: { PROYECTO:'Transformación Digital Alpha', CLIENTE:'Banco Santander S.A.', PM:'María González', FECHA:'18 Junio 2026', AVANCE_REAL:43, AVANCE_BASE:47, RAG:'Amber' },
+  config: { PROYECTO:'Transformación Digital Alpha', CLIENTE:'Banco Santander S.A.', PM:'María González', FECHA:'18 Junio 2026', RAG:'Amber' },
   kpis: [
     {KPI:'Disponibilidad Sistema',Unidad:'%',Meta:99.5,Real:98.2,Tendencia:'Baja',Estado:'Rojo'},
     {KPI:'Tiempo de Respuesta',Unidad:'ms',Meta:200,Real:185,Tendencia:'Sube',Estado:'Verde'},
@@ -440,15 +455,22 @@ const DEMO = {
     {ID:'R-06',Descripcion:'Cambio de requerimientos',Probabilidad:'Media',Impacto:'Bajo',Severidad:'Bajo',Propietario:'PM',Estado:'Activo',Plan_Mitigacion:'Change control process establecido'},
   ],
   cronograma: [
-    {Hito:'Kick-off',Fecha_Planeada:'2026-01-15',Fecha_Real:'2026-01-15',Avance:100,Estado:'Completado'},
-    {Hito:'Análisis de Requerimientos',Fecha_Planeada:'2026-02-28',Fecha_Real:'2026-03-05',Avance:100,Estado:'Completado'},
-    {Hito:'Diseño de Arquitectura',Fecha_Planeada:'2026-03-31',Fecha_Real:'2026-04-02',Avance:100,Estado:'Completado'},
-    {Hito:'Desarrollo Sprint 1',Fecha_Planeada:'2026-04-30',Fecha_Real:'2026-05-01',Avance:100,Estado:'Completado'},
-    {Hito:'Desarrollo Sprint 2',Fecha_Planeada:'2026-05-31',Fecha_Real:'',Avance:75,Estado:'En curso'},
-    {Hito:'UAT — Pruebas de Usuario',Fecha_Planeada:'2026-06-15',Fecha_Real:'',Avance:20,Estado:'Retrasado'},
-    {Hito:'Capacitación Usuarios',Fecha_Planeada:'2026-07-15',Fecha_Real:'',Avance:0,Estado:'Pendiente'},
-    {Hito:'Go-Live',Fecha_Planeada:'2026-07-31',Fecha_Real:'',Avance:0,Estado:'Pendiente'},
-    {Hito:'Soporte Post-Implementación',Fecha_Planeada:'2026-08-31',Fecha_Real:'',Avance:0,Estado:'Pendiente'},
+    {Fase:'Análisis',    Actividad:'Levantamiento de requerimientos',    Peso:3, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'PM',         Fecha_Inicio:'2026-01-15', Fecha_Fin:'2026-01-30'},
+    {Fase:'Análisis',    Actividad:'Validación con stakeholders',         Peso:2, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'PM',         Fecha_Inicio:'2026-01-31', Fecha_Fin:'2026-02-14'},
+    {Fase:'Análisis',    Actividad:'Aprobación de requerimientos',        Peso:1, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'Sponsor',    Fecha_Inicio:'2026-02-15', Fecha_Fin:'2026-02-28'},
+    {Fase:'Diseño',      Actividad:'Arquitectura técnica',                Peso:4, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'Arquitecto', Fecha_Inicio:'2026-03-01', Fecha_Fin:'2026-03-20'},
+    {Fase:'Diseño',      Actividad:'Diseño de base de datos',             Peso:3, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'DBA Lead',   Fecha_Inicio:'2026-03-10', Fecha_Fin:'2026-03-31'},
+    {Fase:'Diseño',      Actividad:'Prototipo de interfaces',             Peso:2, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'UX Lead',    Fecha_Inicio:'2026-03-15', Fecha_Fin:'2026-04-05'},
+    {Fase:'Desarrollo',  Actividad:'Sprint 1 — Core backend',             Peso:5, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'Dev Lead',   Fecha_Inicio:'2026-04-01', Fecha_Fin:'2026-04-30'},
+    {Fase:'Desarrollo',  Actividad:'Sprint 2 — Frontend',                 Peso:4, Avance_Real:75,  Avance_Base:90,  Estado:'En curso',    Responsable:'Dev Lead',   Fecha_Inicio:'2026-05-01', Fecha_Fin:'2026-05-31'},
+    {Fase:'Desarrollo',  Actividad:'Sprint 3 — Integraciones',            Peso:4, Avance_Real:30,  Avance_Base:60,  Estado:'Retrasado',   Responsable:'Arquitecto', Fecha_Inicio:'2026-05-15', Fecha_Fin:'2026-06-15'},
+    {Fase:'Desarrollo',  Actividad:'Pruebas unitarias',                   Peso:3, Avance_Real:60,  Avance_Base:80,  Estado:'En curso',    Responsable:'QA Lead',    Fecha_Inicio:'2026-04-15', Fecha_Fin:'2026-06-15'},
+    {Fase:'UAT',         Actividad:'Preparación ambiente UAT',            Peso:2, Avance_Real:20,  Avance_Base:50,  Estado:'Retrasado',   Responsable:'TI Lead',    Fecha_Inicio:'2026-06-01', Fecha_Fin:'2026-06-15'},
+    {Fase:'UAT',         Actividad:'Pruebas funcionales con usuarios',    Peso:4, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'PM',         Fecha_Inicio:'2026-06-16', Fecha_Fin:'2026-06-30'},
+    {Fase:'UAT',         Actividad:'Corrección de defectos',              Peso:3, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'Dev Lead',   Fecha_Inicio:'2026-07-01', Fecha_Fin:'2026-07-15'},
+    {Fase:'Go-Live',     Actividad:'Capacitación usuarios finales',       Peso:3, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'Change Mgr', Fecha_Inicio:'2026-07-15', Fecha_Fin:'2026-07-25'},
+    {Fase:'Go-Live',     Actividad:'Migración de datos producción',       Peso:4, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'DBA Lead',   Fecha_Inicio:'2026-07-26', Fecha_Fin:'2026-07-31'},
+    {Fase:'Go-Live',     Actividad:'Cutover y puesta en marcha',          Peso:5, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'PM',         Fecha_Inicio:'2026-07-31', Fecha_Fin:'2026-07-31'},
   ],
   gobierno: [
     {Tipo:'Decision',ID:'D-01',Descripcion:'Selección de proveedor cloud: AWS',Propietario:'CTO',Fecha_Limite:'2026-02-01',Estado:'Cerrado'},
@@ -543,6 +565,14 @@ function renderAll(d) {
 // ══════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════
+function calcAvance(cron) {
+  if (!cron || !cron.length) return {real:0, base:0};
+  const totW = cron.reduce((s,r) => s + (+r.Peso||1), 0);
+  const real = cron.reduce((s,r) => s + (+r.Avance_Real||+r.Avance||0) * (+r.Peso||1), 0) / totW;
+  const base = cron.reduce((s,r) => s + (+r.Avance_Base||0) * (+r.Peso||1), 0) / totW;
+  return {real, base};
+}
+
 const fmt = n => (n == null || n === '') ? '—' : new Intl.NumberFormat('es-CL',{minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
 const fmtDate = d => {
   if (!d) return '—';
@@ -601,11 +631,11 @@ function renderResumen(d) {
   const cron = d.cronograma || DEMO.cronograma;
   const gov = d.gobierno || DEMO.gobierno;
 
-  const real = +cfg.AVANCE_REAL || 0, base = +cfg.AVANCE_BASE || 0;
+  const {real, base} = calcAvance(cron);
   const diff = real - base;
-  document.getElementById('k-avreal').innerHTML = `${real}<span class="unit">%</span>`;
-  document.getElementById('k-avsub').innerHTML = `<span class="${diff>=0?'pos':'neg'}">${diff>=0?'▲':' ▼'} ${Math.abs(diff).toFixed(1)}% vs base</span>`;
-  document.getElementById('k-avbar').style.width = real + '%';
+  document.getElementById('k-avreal').innerHTML = `${real.toFixed(0)}<span class="unit">%</span>`;
+  document.getElementById('k-avsub').innerHTML = `<span class="${diff>=0?'pos':'neg'}">${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(1)}% vs base</span>`;
+  document.getElementById('k-avbar').style.width = real.toFixed(0) + '%';
 
   const totB = pres.reduce((s,r) => s+(+r.Presupuesto||0), 0);
   const totE = pres.reduce((s,r) => s+(+r.Ejecutado||0), 0);
@@ -631,18 +661,29 @@ function renderResumen(d) {
   document.getElementById('k-accsub').textContent = accVenc.length + ' vencidas';
 
   document.getElementById('sm-comp').textContent = cron.filter(c=>/complet/i.test(c.Estado||'')).length;
-  document.getElementById('sm-cur').textContent = cron.filter(c=>/curso/i.test(c.Estado||'')).length;
-  document.getElementById('sm-ret').textContent = cron.filter(c=>/retras/i.test(c.Estado||'')).length;
+  document.getElementById('sm-cur').textContent  = cron.filter(c=>/curso/i.test(c.Estado||'')).length;
+  document.getElementById('sm-ret').textContent  = cron.filter(c=>/retras/i.test(c.Estado||'')).length;
   document.getElementById('sm-pend').textContent = cron.filter(c=>/pendient/i.test(c.Estado||'')).length;
 
+  const fases = [...new Set(cron.map(c => c.Fase||'Sin fase'))];
+  const faseReal = fases.map(f => {
+    const rows = cron.filter(c=>(c.Fase||'Sin fase')===f);
+    const tw = rows.reduce((s,c)=>s+(+c.Peso||1),0);
+    return tw ? rows.reduce((s,c)=>s+(+c.Avance_Real||+c.Avance||0)*(+c.Peso||1),0)/tw : 0;
+  });
+  const faseBase = fases.map(f => {
+    const rows = cron.filter(c=>(c.Fase||'Sin fase')===f);
+    const tw = rows.reduce((s,c)=>s+(+c.Peso||1),0);
+    return tw ? rows.reduce((s,c)=>s+(+c.Avance_Base||0)*(+c.Peso||1),0)/tw : 0;
+  });
   destroyChart('chartAvance');
   charts.chartAvance = new Chart(document.getElementById('chartAvance'), {
     type:'bar',
-    data:{labels:['Avance'],datasets:[
-      {label:'Real',data:[real],backgroundColor:'#FFE600',borderRadius:5},
-      {label:'Base (Plan)',data:[base],backgroundColor:'rgba(255,255,255,0.15)',borderRadius:5}
+    data:{labels:fases,datasets:[
+      {label:'Real',data:faseReal.map(v=>+v.toFixed(1)),backgroundColor:'#FFE600',borderRadius:4},
+      {label:'Base (Plan)',data:faseBase.map(v=>+v.toFixed(1)),backgroundColor:'rgba(255,255,255,0.15)',borderRadius:4}
     ]},
-    options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{
+    options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}}},scales:{
       x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1'}},
       y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1',callback:v=>v+'%'}}
     }}
@@ -783,39 +824,79 @@ function renderRiesgos(d) {
 // ══════════════════════════════════════════════
 function renderCronograma(d) {
   const cron = d.cronograma || DEMO.cronograma;
-  const comp=cron.filter(c=>/complet/i.test(c.Estado||'')).length;
-  const ret=cron.filter(c=>/retras/i.test(c.Estado||'')).length;
-  const pend=cron.filter(c=>/pendient/i.test(c.Estado||'')).length;
-  const avg=cron.length?cron.reduce((s,c)=>s+(+c.Avance||0),0)/cron.length:0;
-  document.getElementById('c-av').innerHTML=`${avg.toFixed(0)}<span class="unit">%</span>`;
-  document.getElementById('c-comp').textContent=comp;
-  document.getElementById('c-ret').textContent=ret;
-  document.getElementById('c-pend').textContent=pend;
+  const {real, base} = calcAvance(cron);
+  const diff = real - base;
+  const comp  = cron.filter(c=>/complet/i.test(c.Estado||'')).length;
+  const ret   = cron.filter(c=>/retras/i.test(c.Estado||'')).length;
+  const pend  = cron.filter(c=>/pendient/i.test(c.Estado||'')).length;
+  document.getElementById('c-av').innerHTML = `${real.toFixed(0)}<span class="unit">%</span>`;
+  document.getElementById('c-avsub').innerHTML = `<span class="${diff>=0?'pos':'neg'}">${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(1)}% vs base</span>`;
+  document.getElementById('c-avbar').style.width = real.toFixed(0) + '%';
+  document.getElementById('c-comp').textContent = comp;
+  document.getElementById('c-ret').textContent  = ret;
+  document.getElementById('c-pend').textContent = pend;
 
+  // ── Phase summary cards
+  const fases = [...new Set(cron.map(c=>c.Fase||'Sin fase'))];
+  document.getElementById('phaseSummary').innerHTML = fases.map(f => {
+    const rows = cron.filter(c=>(c.Fase||'Sin fase')===f);
+    const tw = rows.reduce((s,c)=>s+(+c.Peso||1),0);
+    const r  = tw ? rows.reduce((s,c)=>s+(+c.Avance_Real||+c.Avance||0)*(+c.Peso||1),0)/tw : 0;
+    const b  = tw ? rows.reduce((s,c)=>s+(+c.Avance_Base||0)*(+c.Peso||1),0)/tw : 0;
+    const d2 = r - b;
+    const allDone = rows.every(c=>/complet/i.test(c.Estado||''));
+    const anyRet  = rows.some(c=>/retras/i.test(c.Estado||''));
+    const anyPend = rows.every(c=>/pendient/i.test(c.Estado||''));
+    const cls = allDone ? 'pc-done' : anyRet ? 'pc-bad' : anyPend ? 'pc-pend' : 'pc-warn';
+    const pctColor = allDone ? '#2ecc71' : anyRet ? '#ff4757' : r>=b ? '#FFE600' : 'var(--amber)';
+    return `<div class="phase-card ${cls}">
+      <div class="ph-name">${f}</div>
+      <div class="ph-pct" style="color:${pctColor}">${r.toFixed(0)}%</div>
+      <div class="ph-base">Base: ${b.toFixed(0)}%</div>
+      <div class="ph-delta" style="color:${d2>=0?'#2ecc71':'#ff4757'}">${d2>=0?'▲':'▼'} ${Math.abs(d2).toFixed(1)}%</div>
+      <div class="ph-acts">${rows.length} actividad${rows.length!==1?'es':''}</div>
+    </div>`;
+  }).join('');
+
+  // ── Chart: actividades individuales (Real + Base)
   destroyChart('chartCronograma');
-  charts.chartCronograma=new Chart(document.getElementById('chartCronograma'),{
+  charts.chartCronograma = new Chart(document.getElementById('chartCronograma'), {
     type:'bar',
-    data:{labels:cron.map(c=>c.Hito||''),datasets:[{label:'% Avance',data:cron.map(c=>+c.Avance||0),
-      backgroundColor:cron.map(c=>/complet/i.test(c.Estado||'')?'#168736':/curso/i.test(c.Estado||'')?'#0066CC':/retras/i.test(c.Estado||'')?'#D0021B':'#4A4A5C'),borderRadius:3}]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{
+    data:{labels:cron.map(c=>c.Actividad||c.Hito||''),datasets:[
+      {label:'Avance Real',data:cron.map(c=>+c.Avance_Real||+c.Avance||0),
+        backgroundColor:cron.map(c=>/complet/i.test(c.Estado||'')?'#168736':/curso/i.test(c.Estado||'')?'#0066CC':/retras/i.test(c.Estado||'')?'#D0021B':'#4A4A5C'),
+        borderRadius:3},
+      {label:'Base (Plan)',data:cron.map(c=>+c.Avance_Base||0),
+        backgroundColor:'rgba(255,255,255,0.08)',borderRadius:3}
+    ]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}}},scales:{
       x:{min:0,max:100,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1',callback:v=>v+'%'}},
-      y:{grid:{display:false},ticks:{color:'#C4C4CC',font:{size:11}}}
+      y:{grid:{display:false},ticks:{color:'#C4C4CC',font:{size:10}}}
     }}
   });
 
+  // ── Activity list
   document.getElementById('msList').innerHTML =
-    `<div class="ms-row" style="background:rgba(0,0,0,.2);font-size:10px;color:var(--gray);font-weight:600">
-      <div>HITO</div><div>PLANEADO</div><div>REAL</div><div>PROGRESO</div><div>ESTADO</div>
+    `<div class="ms-row" style="background:rgba(0,0,0,.2);font-size:10px;color:var(--gray);font-weight:600;letter-spacing:.5px">
+      <div>ACTIVIDAD</div><div>FASE</div><div>RESPONSABLE</div><div>PROGRESO</div><div>ESTADO</div>
     </div>` +
-    cron.map(c=>{
-      const p=+c.Avance||0;
+    cron.map(c => {
+      const r = +c.Avance_Real||+c.Avance||0;
+      const b = +c.Avance_Base||0;
+      const d2 = r - b;
       return `<div class="ms-row">
-        <div class="ms-name">${c.Hito||''}</div>
-        <div class="ms-date">${fmtDate(c.Fecha_Planeada)}</div>
-        <div class="ms-date">${fmtDate(c.Fecha_Real)||'—'}</div>
         <div>
-          <div class="ibar"><div class="ibar-fill ${msClass(c.Estado)}" style="width:${p}%"></div></div>
-          <div class="ms-pct-lbl">${p}%</div>
+          <div class="ms-name">${c.Actividad||c.Hito||''}</div>
+          <div class="ms-meta">${fmtDate(c.Fecha_Inicio)} → ${fmtDate(c.Fecha_Fin)}</div>
+        </div>
+        <div><span class="badge bk">${c.Fase||''}</span></div>
+        <div style="font-size:12px;color:var(--gray-light)">${c.Responsable||'—'}</div>
+        <div>
+          <div class="ibar" style="height:5px"><div class="ibar-fill ${msClass(c.Estado)}" style="width:${r}%"></div></div>
+          <div class="ms-pct-lbl">
+            <span>${r}% real</span>
+            <span style="color:${d2>=0?'#2ecc71':'#ff4757'}">${d2>=0?'▲':'▼'}${Math.abs(d2).toFixed(0)}%</span>
+          </div>
         </div>
         <div><span class="badge ${statusClass(c.Estado)}">${c.Estado||''}</span></div>
       </div>`;
@@ -881,12 +962,59 @@ function renderIndicadores(d) {
 function downloadTemplate() {
   const wb = XLSX.utils.book_new();
   const s = (data, name) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), name);
-  s([['Clave','Valor'],['PROYECTO','Nombre del Proyecto'],['CLIENTE','Cliente S.A.'],['PM','Nombre PM'],['FECHA','01 Enero 2026'],['AVANCE_REAL',0],['AVANCE_BASE',0],['RAG','Amber']],'CONFIG');
-  s([['KPI','Unidad','Meta','Real','Tendencia','Estado'],['KPI Ejemplo','%',100,0,'Sube','Verde']],'KPIs');
-  s([['Categoria','Item','Presupuesto','Ejecutado'],['CAPEX','Infraestructura',0,0],['OPEX','Consultoría',0,0]],'PRESUPUESTO');
-  s([['ID','Descripcion','Probabilidad','Impacto','Severidad','Propietario','Estado','Plan_Mitigacion'],['R-01','Descripción del riesgo','Alta','Alto','Alto','Responsable','Activo','Plan de acción']],'RIESGOS');
-  s([['Hito','Fecha_Planeada','Fecha_Real','Avance','Estado'],['Kick-off','2026-01-01','2026-01-01',100,'Completado'],['Go-Live','2026-06-01','',0,'Pendiente']],'CRONOGRAMA');
-  s([['Tipo','ID','Descripcion','Propietario','Fecha_Limite','Estado'],['Decision','D-01','Descripción','Responsable','2026-01-01','Abierto'],['Issue','I-01','Descripción','Responsable','2026-01-01','Abierto'],['Accion','A-01','Descripción','Responsable','2026-01-01','Pendiente']],'GOBIERNO');
+  s([
+    ['Clave','Valor','Descripción'],
+    ['PROYECTO','Nombre del Proyecto','Nombre completo del proyecto'],
+    ['CLIENTE','Cliente S.A.','Razón social del cliente'],
+    ['PM','Nombre PM','Project Manager responsable'],
+    ['FECHA','18 Junio 2026','Fecha del reporte (texto libre)'],
+    ['RAG','Amber','Estado RAG: Green / Amber / Red'],
+  ],'CONFIG');
+  s([
+    ['KPI','Unidad','Meta','Real','Tendencia','Estado'],
+    ['Disponibilidad Sistema','%',99.5,98.2,'Baja','Rojo'],
+    ['Tiempo de Respuesta','ms',200,185,'Sube','Verde'],
+    ['Satisfacción Usuario','%',85,78,'Sube','Amarillo'],
+    ['Cobertura de Pruebas','%',80,72,'Sube','Amarillo'],
+    ['Incidentes Críticos','#',0,2,'Baja','Rojo'],
+    ['Entregables a Tiempo','%',90,85,'Sube','Verde'],
+  ],'KPIs');
+  s([
+    ['Categoria','Item','Presupuesto','Ejecutado'],
+    ['CAPEX','Infraestructura Cloud',80000,72000],
+    ['CAPEX','Licencias Software',45000,44800],
+    ['OPEX','Consultores',120000,95000],
+    ['OPEX','Personal Interno',60000,48000],
+    ['OPEX','Capacitaciones',15000,12500],
+  ],'PRESUPUESTO');
+  s([
+    ['ID','Descripcion','Probabilidad','Impacto','Severidad','Propietario','Estado','Plan_Mitigacion'],
+    ['R-01','Retraso en migración de datos','Alta','Alto','Alto','TI Lead','Activo','Plan de contingencia con rollback'],
+    ['R-02','Resistencia al cambio usuarios','Alta','Medio','Alto','Change Mgr','En mitigación','Programa de comunicación'],
+    ['R-03','Integración API terceros','Media','Medio','Medio','Arquitecto','Activo','Pruebas de integración tempranas'],
+  ],'RIESGOS');
+  s([
+    ['Fase','Actividad','Peso','Avance_Real','Avance_Base','Estado','Responsable','Fecha_Inicio','Fecha_Fin'],
+    ['Análisis','Levantamiento de requerimientos',3,100,100,'Completado','PM','2026-01-15','2026-01-30'],
+    ['Análisis','Validación con stakeholders',2,100,100,'Completado','PM','2026-01-31','2026-02-14'],
+    ['Diseño','Arquitectura técnica',4,100,100,'Completado','Arquitecto','2026-03-01','2026-03-20'],
+    ['Diseño','Diseño de base de datos',3,100,100,'Completado','DBA Lead','2026-03-10','2026-03-31'],
+    ['Desarrollo','Sprint 1 — Core backend',5,100,100,'Completado','Dev Lead','2026-04-01','2026-04-30'],
+    ['Desarrollo','Sprint 2 — Frontend',4,75,90,'En curso','Dev Lead','2026-05-01','2026-05-31'],
+    ['Desarrollo','Sprint 3 — Integraciones',4,30,60,'Retrasado','Arquitecto','2026-05-15','2026-06-15'],
+    ['UAT','Preparación ambiente UAT',2,20,50,'Retrasado','TI Lead','2026-06-01','2026-06-15'],
+    ['UAT','Pruebas funcionales con usuarios',4,0,0,'Pendiente','PM','2026-06-16','2026-06-30'],
+    ['Go-Live','Cutover y puesta en marcha',5,0,0,'Pendiente','PM','2026-07-31','2026-07-31'],
+  ],'CRONOGRAMA');
+  s([
+    ['Tipo','ID','Descripcion','Propietario','Fecha_Limite','Estado'],
+    ['Decision','D-01','Selección de proveedor cloud','CTO','2026-02-01','Cerrado'],
+    ['Decision','D-02','Definición de SLAs de producción','PM','2026-06-30','Abierto'],
+    ['Issue','I-01','Acceso a datos de producción para pruebas','DBA Lead','2026-06-20','Abierto'],
+    ['Issue','I-02','Disponibilidad del equipo cliente reducida','PM','2026-06-10','Vencido'],
+    ['Accion','A-01','Revisar y firmar SLAs con TI cliente','PM','2026-06-25','Pendiente'],
+    ['Accion','A-02','Actualizar plan de capacitación','Change Mgr','2026-06-30','En progreso'],
+  ],'GOBIERNO');
   XLSX.writeFile(wb, 'dashboard-template.xlsx');
 }
 
