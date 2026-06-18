@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EY | Dashboard Ejecutivo</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #2E2E38;
+  --sidebar-bg: #1A1A24;
+  --card-bg: #3D3D4E;
+  --yellow: #FFE600;
+  --yellow-dim: rgba(255,230,0,0.12);
+  --white: #FFFFFF;
+  --gray: #9897A1;
+  --gray-light: #C4C4CC;
+  --border: rgba(255,255,255,0.08);
+  --green: #168736;
+  --green-bg: rgba(22,135,54,0.2);
+  --amber: #FF8C00;
+  --amber-bg: rgba(255,140,0,0.2);
+  --red: #D0021B;
+  --red-bg: rgba(208,2,27,0.2);
+  --blue: #0066CC;
+  --blue-bg: rgba(0,102,204,0.2);
+  --sidebar-w: 240px;
+  --radius: 8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--white);min-height:100vh;display:flex;font-size:14px;line-height:1.5}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--sidebar-bg);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;border-right:1px solid var(--border)}
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+.ey-mark{width:38px;height:38px;background:var(--yellow);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#1A1A24;border-radius:2px;letter-spacing:-1px;flex-shrink:0}
+.ey-logo{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ey-name{font-size:12px;font-weight:700;color:var(--white);line-height:1.2}
+.ey-tagline{font-size:9px;color:var(--gray);font-weight:300;letter-spacing:.3px}
+.dash-label{font-size:9px;font-weight:700;letter-spacing:2px;color:var(--yellow);text-transform:uppercase}
+.sidebar-proj{padding:14px 20px;border-bottom:1px solid var(--border)}
+.proj-name{font-size:13px;font-weight:600;color:var(--white);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-meta{font-size:11px;color:var(--gray);margin-bottom:2px}
+.rag-dot{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600}
+.rag-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.rag-g{background:var(--green-bg);color:#2ecc71}
+.rag-a{background:var(--amber-bg);color:var(--amber)}
+.rag-r{background:var(--red-bg);color:#ff4757}
+.sidebar-nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-section{font-size:9px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:1.5px;padding:8px 20px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--gray-light);font-size:13px;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--white)}
+.nav-item.active{background:var(--yellow-dim);color:var(--yellow);font-weight:600;border-left-color:var(--yellow)}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sidebar-foot{padding:14px 20px;border-top:1px solid var(--border)}
+.btn-upload{width:100%;padding:10px;background:var(--yellow);color:#1A1A24;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;transition:opacity .15s}
+.btn-upload:hover{opacity:.88}
+.btn-tpl{width:100%;margin-top:8px;padding:7px;background:transparent;color:var(--gray);border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-tpl:hover{color:var(--white);border-color:var(--gray)}
+#fileInput{display:none}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{height:58px;background:var(--sidebar-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-meta{font-size:12px;color:var(--gray);display:flex;align-items:center;gap:18px}
+.view-wrap{flex:1;padding:24px 28px}
+.view{display:none}
+.view.active{display:block}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{margin-bottom:20px}
+.sec-title{font-size:18px;font-weight:700}
+.sec-sub{font-size:12px;color:var(--gray);margin-top:2px}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;gap:16px;margin-bottom:20px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.kpi-card{background:var(--card-bg);border-radius:var(--radius);padding:20px;border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.cy::before{background:var(--yellow)}
+.kpi-card.cb::before{background:var(--blue)}
+.kpi-card.cg::before{background:var(--green)}
+.kpi-card.ca::before{background:var(--amber)}
+.kpi-card.cr::before{background:var(--red)}
+.kpi-lbl{font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.kpi-val{font-size:30px;font-weight:700;line-height:1;margin-bottom:6px}
+.kpi-val .unit{font-size:15px;font-weight:400;color:var(--gray-light)}
+.kpi-note{font-size:12px;color:var(--gray)}
+.kpi-note.pos{color:#2ecc71}
+.kpi-note.neg{color:#ff4757}
+.kpi-note.warn{color:var(--amber)}
+.pbar{width:100%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:10px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+
+/* ── CHART CARDS ── */
+.chart-row{display:grid;gap:16px;margin-bottom:20px}
+.cr2{grid-template-columns:1fr 1fr}
+.cr3{grid-template-columns:1.5fr 1fr 1fr}
+.chart-card{background:var(--card-bg);border-radius:var(--radius);padding:20px;border:1px solid var(--border)}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:16px}
+canvas{max-height:240px}
+
+/* ── TABLES ── */
+.tbl-card{background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+.tbl-hdr{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 16px;text-align:left;font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+td{padding:11px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.025)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+.bg{background:var(--green-bg);color:#2ecc71}
+.ba{background:var(--amber-bg);color:var(--amber)}
+.br{background:var(--red-bg);color:#ff4757}
+.bb{background:var(--blue-bg);color:#5dade2}
+.bk{background:rgba(255,255,255,.08);color:var(--gray-light)}
+
+/* ── PROGRESS INLINE ── */
+.ibar{width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.ibar-fill{height:100%;border-radius:3px}
+.pg{background:var(--green)}
+.pa{background:var(--amber)}
+.pr{background:var(--red)}
+.py{background:var(--yellow)}
+.pb{background:var(--blue)}
+
+/* ── RISK HEATMAP ── */
+.hm-wrap{font-size:11px}
+.hm-col-labels{display:grid;grid-template-columns:56px repeat(3,1fr);gap:4px;margin-bottom:4px}
+.hm-col-label{text-align:center;font-size:10px;color:var(--gray);font-weight:600;padding:2px}
+.hm-row{display:grid;grid-template-columns:56px repeat(3,1fr);gap:4px;margin-bottom:4px}
+.hm-row-label{display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:10px;color:var(--gray);font-weight:600}
+.hm-cell{border-radius:5px;padding:10px 6px;text-align:center;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default}
+.hm-cell .cnt{font-size:20px;font-weight:700}
+.hm-cell .ids{font-size:9px;opacity:.7;margin-top:2px}
+.hm-lo{background:rgba(22,135,54,.3);color:#2ecc71}
+.hm-md{background:rgba(255,140,0,.3);color:var(--amber)}
+.hm-hi{background:rgba(208,2,27,.3);color:#ff4757}
+
+/* ── PHASE SUMMARY CARDS ── */
+.phase-cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.phase-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;min-width:130px;flex:1;position:relative;overflow:hidden}
+.phase-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--yellow)}
+.phase-card.pc-done::before{background:var(--green)}
+.phase-card.pc-warn::before{background:var(--amber)}
+.phase-card.pc-bad::before{background:var(--red)}
+.phase-card.pc-pend::before{background:var(--border)}
+.ph-name{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.ph-pct{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
+.ph-base{font-size:11px;color:var(--gray);margin-bottom:6px}
+.ph-delta{font-size:11px;font-weight:600}
+.ph-acts{font-size:10px;color:var(--gray)}
+
+/* ── ACTIVITY LIST ── */
+.ms-row{padding:12px 20px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:2.5fr 90px 100px 170px 90px;align-items:center;gap:12px}
+.ms-row:last-child{border-bottom:none}
+.ms-name{font-size:13px;font-weight:500}
+.ms-meta{font-size:11px;color:var(--gray)}
+.ms-pct-lbl{font-size:10px;color:var(--gray);margin-top:3px;display:flex;justify-content:space-between}
+
+/* ── STAT BOX ── */
+.stat-box{background:rgba(0,0,0,.2);border-radius:5px;padding:14px;text-align:center;border:1px solid var(--border)}
+.stat-val{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:10px;color:var(--gray);font-weight:500}
+
+/* ── SUB TABS ── */
+.sub-tabs{display:flex;gap:3px;margin-bottom:16px;background:var(--sidebar-bg);padding:4px;border-radius:5px;width:fit-content}
+.sub-tab{padding:7px 16px;border-radius:3px;font-size:12px;font-weight:500;cursor:pointer;color:var(--gray);border:none;background:transparent;font-family:inherit;transition:all .15s}
+.sub-tab.active{background:var(--card-bg);color:var(--white)}
+.sub-tab:hover:not(.active){color:var(--white)}
+.sub-view{display:none}
+.sub-view.active{display:block}
+
+/* ── KPI DETAIL GRID ── */
+.kd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kd-card{background:var(--card-bg);border-radius:var(--radius);padding:20px;border:1px solid var(--border)}
+.kd-name{font-size:13px;font-weight:600;margin-bottom:12px}
+.kd-vals{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.kd-real{font-size:28px;font-weight:700}
+.kd-meta{font-size:12px;color:var(--gray)}
+.kd-trend{font-size:11px;font-weight:600}
+.kd-pctlbl{font-size:11px;color:var(--gray);margin-top:5px}
+
+/* ── INFO BANNER ── */
+.info-banner{background:var(--yellow-dim);border:1px solid rgba(255,230,0,.25);border-radius:var(--radius);padding:11px 18px;margin-bottom:20px;font-size:12px;color:var(--yellow);display:flex;align-items:center;gap:8px}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ════════════ SIDEBAR ════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="ey-logo">
+      <div class="ey-mark">EY</div>
+      <div>
+        <div class="ey-name">Ernst &amp; Young</div>
+        <div class="ey-tagline">Shape the future with confidence</div>
+      </div>
+    </div>
+    <div class="dash-label">Dashboard Ejecutivo</div>
+  </div>
+
+  <div class="sidebar-proj">
+    <div class="proj-name" id="projName">Sin datos cargados</div>
+    <div class="proj-meta" id="projClient"></div>
+    <div class="proj-meta" id="projDate"></div>
+    <div id="ragBadge"></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Vistas</div>
+    <div class="nav-item active" onclick="switchView('resumen',this)"><span class="nav-icon">📊</span>Resumen Ejecutivo</div>
+    <div class="nav-item" onclick="switchView('presupuesto',this)"><span class="nav-icon">💰</span>Presupuesto</div>
+    <div class="nav-item" onclick="switchView('riesgos',this)"><span class="nav-icon">⚠️</span>Riesgos</div>
+    <div class="nav-item" onclick="switchView('cronograma',this)"><span class="nav-icon">📅</span>Cronograma</div>
+    <div class="nav-item" onclick="switchView('gobierno',this)"><span class="nav-icon">🏛️</span>Gobierno</div>
+    <div class="nav-item" onclick="switchView('indicadores',this)"><span class="nav-icon">📈</span>Indicadores</div>
+  </nav>
+
+  <div class="sidebar-foot">
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+    <button class="btn-upload" onclick="document.getElementById('fileInput').click()">📂 Cargar datos desde Excel</button>
+    <button class="btn-tpl" onclick="downloadTemplate()">⬇ Descargar plantilla Excel</button>
+  </div>
+</aside>
+
+<!-- ════════════ MAIN ════════════ -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">Dashboard KPI &amp; Gestión de Proyectos</div>
+    <div class="topbar-meta">
+      <span id="topbarPM"></span>
+      <span id="topbarDate"></span>
+    </div>
+  </div>
+
+  <div class="view-wrap">
+
+    <!-- ══ RESUMEN EJECUTIVO ══ -->
+    <div class="view active" id="view-resumen">
+      <div class="sec-hdr">
+        <div class="sec-title">Resumen Ejecutivo</div>
+        <div class="sec-sub">Visión general del estado del proyecto</div>
+      </div>
+      <div class="info-banner" id="demoBanner">ℹ️ Mostrando datos de demostración — carga tu Excel para ver datos reales.</div>
+      <div class="kpi-grid g4">
+        <div class="kpi-card cy">
+          <div class="kpi-lbl">Avance del Proyecto</div>
+          <div class="kpi-val" id="k-avreal">—<span class="unit">%</span></div>
+          <div class="kpi-note" id="k-avsub">Base: —%</div>
+          <div class="pbar"><div class="pbar-fill" id="k-avbar" style="background:var(--yellow);width:0%"></div></div>
+        </div>
+        <div class="kpi-card cb">
+          <div class="kpi-lbl">Presupuesto Ejecutado</div>
+          <div class="kpi-val" id="k-budpct">—<span class="unit">%</span></div>
+          <div class="kpi-note" id="k-budsub">de —</div>
+          <div class="pbar"><div class="pbar-fill" id="k-budbar" style="background:var(--blue);width:0%"></div></div>
+        </div>
+        <div class="kpi-card ca">
+          <div class="kpi-lbl">Riesgos Activos</div>
+          <div class="kpi-val" id="k-rtotal">—</div>
+          <div class="kpi-note" id="k-rsub">— Alto | — Medio | — Bajo</div>
+        </div>
+        <div class="kpi-card cr">
+          <div class="kpi-lbl">Acciones Abiertas</div>
+          <div class="kpi-val" id="k-acc">—</div>
+          <div class="kpi-note" id="k-accsub">— vencidas</div>
+        </div>
+      </div>
+      <div class="chart-row cr2">
+        <div class="chart-card">
+          <div class="chart-title">Avance Real vs. Base planificado</div>
+          <canvas id="chartAvance"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribución presupuesto ejecutado</div>
+          <canvas id="chartDonut"></canvas>
+        </div>
+      </div>
+      <div class="chart-row cr2">
+        <div class="chart-card">
+          <div class="chart-title">Resumen de Riesgos</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+            <div class="stat-box"><div class="stat-val" id="sr-alto" style="color:#ff4757">—</div><div class="stat-lbl">Alto</div></div>
+            <div class="stat-box"><div class="stat-val" id="sr-medio" style="color:var(--amber)">—</div><div class="stat-lbl">Medio</div></div>
+            <div class="stat-box"><div class="stat-val" id="sr-bajo" style="color:#2ecc71">—</div><div class="stat-lbl">Bajo</div></div>
+          </div>
+          <canvas id="chartRiskBar" style="max-height:110px"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Salud del Cronograma</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+            <div class="stat-box"><div class="stat-val" id="sm-comp" style="color:#2ecc71">—</div><div class="stat-lbl">Completados</div></div>
+            <div class="stat-box"><div class="stat-val" id="sm-cur" style="color:#5dade2">—</div><div class="stat-lbl">En Curso</div></div>
+            <div class="stat-box"><div class="stat-val" id="sm-ret" style="color:#ff4757">—</div><div class="stat-lbl">Retrasados</div></div>
+            <div class="stat-box"><div class="stat-val" id="sm-pend" style="color:var(--gray)">—</div><div class="stat-lbl">Pendientes</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PRESUPUESTO ══ -->
+    <div class="view" id="view-presupuesto">
+      <div class="sec-hdr">
+        <div class="sec-title">Presupuesto</div>
+        <div class="sec-sub">Seguimiento CAPEX y OPEX</div>
+      </div>
+      <div class="kpi-grid g4">
+        <div class="kpi-card cy"><div class="kpi-lbl">Presupuesto Total</div><div class="kpi-val" id="p-total" style="font-size:22px">—</div></div>
+        <div class="kpi-card cb"><div class="kpi-lbl">Total Ejecutado</div><div class="kpi-val" id="p-exec" style="font-size:22px">—</div></div>
+        <div class="kpi-card cg"><div class="kpi-lbl">% Ejecutado</div><div class="kpi-val" id="p-pct">—<span class="unit">%</span></div></div>
+        <div class="kpi-card ca"><div class="kpi-lbl">Varianza</div><div class="kpi-val" id="p-var" style="font-size:22px">—</div><div class="kpi-note" id="p-varsub"></div></div>
+      </div>
+      <div class="chart-row cr2">
+        <div class="chart-card"><div class="chart-title">CAPEX vs OPEX — Presupuesto vs Ejecutado</div><canvas id="chartCapexOpex"></canvas></div>
+        <div class="chart-card"><div class="chart-title">% Ejecución por Categoría</div><canvas id="chartExecPct"></canvas></div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-hdr"><span>Detalle de Presupuesto</span></div>
+        <table>
+          <thead><tr><th>Categoría</th><th>Ítem</th><th style="text-align:right">Presupuesto</th><th style="text-align:right">Ejecutado</th><th style="text-align:right">Varianza</th><th style="text-align:right">% Ejec.</th><th>Estado</th></tr></thead>
+          <tbody id="tblPres"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ RIESGOS ══ -->
+    <div class="view" id="view-riesgos">
+      <div class="sec-hdr">
+        <div class="sec-title">Registro de Riesgos</div>
+        <div class="sec-sub">Identificación, evaluación y seguimiento</div>
+      </div>
+      <div class="kpi-grid g4">
+        <div class="kpi-card cr"><div class="kpi-lbl">Alto</div><div class="kpi-val" id="r-alto">—</div></div>
+        <div class="kpi-card ca"><div class="kpi-lbl">Medio</div><div class="kpi-val" id="r-medio">—</div></div>
+        <div class="kpi-card cg"><div class="kpi-lbl">Bajo</div><div class="kpi-val" id="r-bajo">—</div></div>
+        <div class="kpi-card cb"><div class="kpi-lbl">Total Activos</div><div class="kpi-val" id="r-act">—</div></div>
+      </div>
+      <div class="chart-row cr2">
+        <div class="chart-card">
+          <div class="chart-title">Matriz Probabilidad × Impacto</div>
+          <div id="riskHeatmap" style="margin-top:6px"></div>
+        </div>
+        <div class="chart-card"><div class="chart-title">Distribución por Estado</div><canvas id="chartRiskStatus"></canvas></div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-hdr"><span>Registro Completo de Riesgos</span></div>
+        <table>
+          <thead><tr><th>ID</th><th>Descripción</th><th>Prob.</th><th>Impacto</th><th>Severidad</th><th>Propietario</th><th>Estado</th><th>Mitigación</th></tr></thead>
+          <tbody id="tblRiesgos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ CRONOGRAMA ══ -->
+    <div class="view" id="view-cronograma">
+      <div class="sec-hdr">
+        <div class="sec-title">Cronograma</div>
+        <div class="sec-sub">Actividades ponderadas — avance real vs. base planificado</div>
+      </div>
+      <div class="kpi-grid g4">
+        <div class="kpi-card cy"><div class="kpi-lbl">Avance General</div><div class="kpi-val" id="c-av">—<span class="unit">%</span></div><div class="kpi-note" id="c-avsub"></div><div class="pbar"><div class="pbar-fill" id="c-avbar" style="background:var(--yellow);width:0%"></div></div></div>
+        <div class="kpi-card cg"><div class="kpi-lbl">Completadas</div><div class="kpi-val" id="c-comp">—</div></div>
+        <div class="kpi-card cr"><div class="kpi-lbl">Retrasadas</div><div class="kpi-val" id="c-ret">—</div></div>
+        <div class="kpi-card cb"><div class="kpi-lbl">Pendientes</div><div class="kpi-val" id="c-pend">—</div></div>
+      </div>
+      <div id="phaseSummary" class="phase-cards"></div>
+      <div class="chart-card" style="margin-bottom:20px">
+        <div class="chart-title">Avance Real vs. Base por actividad</div>
+        <canvas id="chartCronograma" style="max-height:360px"></canvas>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-hdr"><span>Detalle de Actividades</span></div>
+        <div id="msList"></div>
+      </div>
+    </div>
+
+    <!-- ══ GOBIERNO ══ -->
+    <div class="view" id="view-gobierno">
+      <div class="sec-hdr">
+        <div class="sec-title">Gobierno</div>
+        <div class="sec-sub">Decisiones, Issues y Acciones</div>
+      </div>
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="switchSub('gov','dec',this)">Decisiones</button>
+        <button class="sub-tab" onclick="switchSub('gov','iss',this)">Issues</button>
+        <button class="sub-tab" onclick="switchSub('gov','acc',this)">Acciones</button>
+      </div>
+      <div class="sub-view active" id="gov-dec">
+        <div class="tbl-card"><div class="tbl-hdr"><span>Decisiones</span></div>
+        <table><thead><tr><th>ID</th><th>Descripción</th><th>Propietario</th><th>Fecha Límite</th><th>Estado</th></tr></thead><tbody id="tblDec"></tbody></table></div>
+      </div>
+      <div class="sub-view" id="gov-iss">
+        <div class="tbl-card"><div class="tbl-hdr"><span>Issues</span></div>
+        <table><thead><tr><th>ID</th><th>Descripción</th><th>Propietario</th><th>Fecha Límite</th><th>Estado</th></tr></thead><tbody id="tblIss"></tbody></table></div>
+      </div>
+      <div class="sub-view" id="gov-acc">
+        <div class="tbl-card"><div class="tbl-hdr"><span>Acciones</span></div>
+        <table><thead><tr><th>ID</th><th>Descripción</th><th>Propietario</th><th>Fecha Límite</th><th>Estado</th></tr></thead><tbody id="tblAcc"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ══ INDICADORES ══ -->
+    <div class="view" id="view-indicadores">
+      <div class="sec-hdr">
+        <div class="sec-title">Indicadores Clave (KPIs)</div>
+        <div class="sec-sub">Seguimiento de metas vs. realidad</div>
+      </div>
+      <div class="kd-grid" id="kpiGrid"></div>
+    </div>
+
+  </div><!-- /view-wrap -->
+</main>
+
+<script>
+// ══════════════════════════════════════════════
+// DEMO DATA
+// ══════════════════════════════════════════════
+const DEMO = {
+  config: { PROYECTO:'Transformación Digital Alpha', CLIENTE:'Banco Santander S.A.', PM:'María González', FECHA:'18 Junio 2026', RAG:'Amber' },
+  kpis: [
+    {KPI:'Disponibilidad Sistema',Unidad:'%',Meta:99.5,Real:98.2,Tendencia:'Baja',Estado:'Rojo'},
+    {KPI:'Tiempo de Respuesta',Unidad:'ms',Meta:200,Real:185,Tendencia:'Sube',Estado:'Verde'},
+    {KPI:'Satisfacción Usuario',Unidad:'%',Meta:85,Real:78,Tendencia:'Sube',Estado:'Amarillo'},
+    {KPI:'Cobertura de Pruebas',Unidad:'%',Meta:80,Real:72,Tendencia:'Sube',Estado:'Amarillo'},
+    {KPI:'Incidentes Críticos',Unidad:'#',Meta:0,Real:2,Tendencia:'Baja',Estado:'Rojo'},
+    {KPI:'Entregables a Tiempo',Unidad:'%',Meta:90,Real:85,Tendencia:'Sube',Estado:'Verde'},
+  ],
+  presupuesto: [
+    {Categoria:'CAPEX',Item:'Infraestructura Cloud',Presupuesto:80000,Ejecutado:72000},
+    {Categoria:'CAPEX',Item:'Licencias Software',Presupuesto:45000,Ejecutado:44800},
+    {Categoria:'CAPEX',Item:'Equipamiento',Presupuesto:20000,Ejecutado:18500},
+    {Categoria:'OPEX',Item:'Consultores EY',Presupuesto:120000,Ejecutado:95000},
+    {Categoria:'OPEX',Item:'Personal Interno',Presupuesto:60000,Ejecutado:48000},
+    {Categoria:'OPEX',Item:'Capacitaciones',Presupuesto:15000,Ejecutado:12500},
+    {Categoria:'OPEX',Item:'Gastos Operativos',Presupuesto:10000,Ejecutado:11200},
+  ],
+  riesgos: [
+    {ID:'R-01',Descripcion:'Retraso en migración de datos',Probabilidad:'Alta',Impacto:'Alto',Severidad:'Alto',Propietario:'TI Lead',Estado:'Activo',Plan_Mitigacion:'Plan de contingencia con rollback'},
+    {ID:'R-02',Descripcion:'Resistencia al cambio usuarios',Probabilidad:'Alta',Impacto:'Medio',Severidad:'Alto',Propietario:'Change Mgr',Estado:'En mitigación',Plan_Mitigacion:'Programa de comunicación y capacitación'},
+    {ID:'R-03',Descripcion:'Falta de recursos TI cliente',Probabilidad:'Media',Impacto:'Alto',Severidad:'Alto',Propietario:'PM',Estado:'Activo',Plan_Mitigacion:'Escalamiento con patrocinador'},
+    {ID:'R-04',Descripcion:'Integración API terceros',Probabilidad:'Media',Impacto:'Medio',Severidad:'Medio',Propietario:'Arquitecto',Estado:'Activo',Plan_Mitigacion:'Pruebas de integración tempranas'},
+    {ID:'R-05',Descripcion:'Seguridad de datos sensibles',Probabilidad:'Baja',Impacto:'Alto',Severidad:'Medio',Propietario:'CISO',Estado:'En mitigación',Plan_Mitigacion:'Auditoría de seguridad mensual'},
+    {ID:'R-06',Descripcion:'Cambio de requerimientos',Probabilidad:'Media',Impacto:'Bajo',Severidad:'Bajo',Propietario:'PM',Estado:'Activo',Plan_Mitigacion:'Change control process establecido'},
+  ],
+  cronograma: [
+    {Fase:'Análisis',    Actividad:'Levantamiento de requerimientos',    Peso:3, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'PM',         Fecha_Inicio:'2026-01-15', Fecha_Fin:'2026-01-30'},
+    {Fase:'Análisis',    Actividad:'Validación con stakeholders',         Peso:2, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'PM',         Fecha_Inicio:'2026-01-31', Fecha_Fin:'2026-02-14'},
+    {Fase:'Análisis',    Actividad:'Aprobación de requerimientos',        Peso:1, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'Sponsor',    Fecha_Inicio:'2026-02-15', Fecha_Fin:'2026-02-28'},
+    {Fase:'Diseño',      Actividad:'Arquitectura técnica',                Peso:4, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'Arquitecto', Fecha_Inicio:'2026-03-01', Fecha_Fin:'2026-03-20'},
+    {Fase:'Diseño',      Actividad:'Diseño de base de datos',             Peso:3, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'DBA Lead',   Fecha_Inicio:'2026-03-10', Fecha_Fin:'2026-03-31'},
+    {Fase:'Diseño',      Actividad:'Prototipo de interfaces',             Peso:2, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'UX Lead',    Fecha_Inicio:'2026-03-15', Fecha_Fin:'2026-04-05'},
+    {Fase:'Desarrollo',  Actividad:'Sprint 1 — Core backend',             Peso:5, Avance_Real:100, Avance_Base:100, Estado:'Completado',  Responsable:'Dev Lead',   Fecha_Inicio:'2026-04-01', Fecha_Fin:'2026-04-30'},
+    {Fase:'Desarrollo',  Actividad:'Sprint 2 — Frontend',                 Peso:4, Avance_Real:75,  Avance_Base:90,  Estado:'En curso',    Responsable:'Dev Lead',   Fecha_Inicio:'2026-05-01', Fecha_Fin:'2026-05-31'},
+    {Fase:'Desarrollo',  Actividad:'Sprint 3 — Integraciones',            Peso:4, Avance_Real:30,  Avance_Base:60,  Estado:'Retrasado',   Responsable:'Arquitecto', Fecha_Inicio:'2026-05-15', Fecha_Fin:'2026-06-15'},
+    {Fase:'Desarrollo',  Actividad:'Pruebas unitarias',                   Peso:3, Avance_Real:60,  Avance_Base:80,  Estado:'En curso',    Responsable:'QA Lead',    Fecha_Inicio:'2026-04-15', Fecha_Fin:'2026-06-15'},
+    {Fase:'UAT',         Actividad:'Preparación ambiente UAT',            Peso:2, Avance_Real:20,  Avance_Base:50,  Estado:'Retrasado',   Responsable:'TI Lead',    Fecha_Inicio:'2026-06-01', Fecha_Fin:'2026-06-15'},
+    {Fase:'UAT',         Actividad:'Pruebas funcionales con usuarios',    Peso:4, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'PM',         Fecha_Inicio:'2026-06-16', Fecha_Fin:'2026-06-30'},
+    {Fase:'UAT',         Actividad:'Corrección de defectos',              Peso:3, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'Dev Lead',   Fecha_Inicio:'2026-07-01', Fecha_Fin:'2026-07-15'},
+    {Fase:'Go-Live',     Actividad:'Capacitación usuarios finales',       Peso:3, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'Change Mgr', Fecha_Inicio:'2026-07-15', Fecha_Fin:'2026-07-25'},
+    {Fase:'Go-Live',     Actividad:'Migración de datos producción',       Peso:4, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'DBA Lead',   Fecha_Inicio:'2026-07-26', Fecha_Fin:'2026-07-31'},
+    {Fase:'Go-Live',     Actividad:'Cutover y puesta en marcha',          Peso:5, Avance_Real:0,   Avance_Base:0,   Estado:'Pendiente',   Responsable:'PM',         Fecha_Inicio:'2026-07-31', Fecha_Fin:'2026-07-31'},
+  ],
+  gobierno: [
+    {Tipo:'Decision',ID:'D-01',Descripcion:'Selección de proveedor cloud: AWS',Propietario:'CTO',Fecha_Limite:'2026-02-01',Estado:'Cerrado'},
+    {Tipo:'Decision',ID:'D-02',Descripcion:'Arquitectura de microservicios aprobada',Propietario:'Arquitecto',Fecha_Limite:'2026-03-15',Estado:'Cerrado'},
+    {Tipo:'Decision',ID:'D-03',Descripcion:'Definición de SLAs de producción',Propietario:'PM',Fecha_Limite:'2026-06-30',Estado:'Abierto'},
+    {Tipo:'Issue',ID:'I-01',Descripcion:'Acceso a datos de producción para pruebas',Propietario:'DBA Lead',Fecha_Limite:'2026-06-20',Estado:'Abierto'},
+    {Tipo:'Issue',ID:'I-02',Descripcion:'Disponibilidad del equipo cliente reducida',Propietario:'PM',Fecha_Limite:'2026-06-10',Estado:'Vencido'},
+    {Tipo:'Issue',ID:'I-03',Descripcion:'Licencias adicionales requeridas',Propietario:'Procurement',Fecha_Limite:'2026-07-01',Estado:'En progreso'},
+    {Tipo:'Accion',ID:'A-01',Descripcion:'Revisar y firmar SLAs con TI cliente',Propietario:'PM',Fecha_Limite:'2026-06-25',Estado:'Pendiente'},
+    {Tipo:'Accion',ID:'A-02',Descripcion:'Actualizar plan de capacitación',Propietario:'Change Mgr',Fecha_Limite:'2026-06-30',Estado:'En progreso'},
+    {Tipo:'Accion',ID:'A-03',Descripcion:'Completar pruebas de regresión Sprint 2',Propietario:'QA Lead',Fecha_Limite:'2026-06-18',Estado:'Vencido'},
+    {Tipo:'Accion',ID:'A-04',Descripcion:'Preparar ambiente UAT',Propietario:'TI Lead',Fecha_Limite:'2026-07-05',Estado:'Pendiente'},
+  ]
+};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let appData = null;
+let charts = {};
+let activeView = 'resumen';
+
+Chart.defaults.color = '#9897A1';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function switchView(id, el) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  el.classList.add('active');
+  activeView = id;
+  const d = appData || DEMO;
+  if (id === 'resumen') renderResumen(d);
+  else if (id === 'presupuesto') renderPresupuesto(d);
+  else if (id === 'riesgos') renderRiesgos(d);
+  else if (id === 'cronograma') renderCronograma(d);
+}
+
+function switchSub(group, tab, btn) {
+  document.querySelectorAll('#view-'+group+' .sub-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#view-'+group+' .sub-view').forEach(v => v.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(group+'-'+tab).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+// EXCEL LOADING
+// ══════════════════════════════════════════════
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'binary', cellDates:true});
+      appData = parseWB(wb);
+      document.getElementById('demoBanner').style.display = 'none';
+      renderAll(appData);
+    } catch(err) { alert('Error al leer el archivo:\n' + err.message); }
+  };
+  reader.readAsBinaryString(file);
+  e.target.value = '';
+}
+
+function parseWB(wb) {
+  const sheet = name => wb.SheetNames.includes(name) ? XLSX.utils.sheet_to_json(wb.Sheets[name]) : [];
+  const data = {kpis: sheet('KPIs'), presupuesto: sheet('PRESUPUESTO'), riesgos: sheet('RIESGOS'), cronograma: sheet('CRONOGRAMA'), gobierno: sheet('GOBIERNO'), config: {}};
+  if (wb.SheetNames.includes('CONFIG')) {
+    XLSX.utils.sheet_to_json(wb.Sheets['CONFIG'], {header:1}).forEach(r => { if (r[0]) data.config[String(r[0]).trim()] = r[1]; });
+  }
+  return data;
+}
+
+// ══════════════════════════════════════════════
+// RENDER ORCHESTRATOR
+// ══════════════════════════════════════════════
+function renderAll(d) {
+  renderSidebar(d.config || DEMO.config);
+  renderGobierno(d);
+  renderIndicadores(d);
+  // Render charts only for active view to avoid 0-size canvas issue
+  if (activeView === 'resumen') renderResumen(d);
+  else if (activeView === 'presupuesto') renderPresupuesto(d);
+  else if (activeView === 'riesgos') renderRiesgos(d);
+  else if (activeView === 'cronograma') renderCronograma(d);
+  else renderResumen(d); // fallback pre-render
+}
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function calcAvance(cron) {
+  if (!cron || !cron.length) return {real:0, base:0};
+  const totW = cron.reduce((s,r) => s + (+r.Peso||1), 0);
+  const real = cron.reduce((s,r) => s + (+r.Avance_Real||+r.Avance||0) * (+r.Peso||1), 0) / totW;
+  const base = cron.reduce((s,r) => s + (+r.Avance_Base||0) * (+r.Peso||1), 0) / totW;
+  return {real, base};
+}
+
+const fmt = n => (n == null || n === '') ? '—' : new Intl.NumberFormat('es-CL',{minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+const fmtDate = d => {
+  if (!d) return '—';
+  const parsed = d instanceof Date ? d : new Date(d);
+  return isNaN(parsed) ? String(d) : parsed.toLocaleDateString('es-CL');
+};
+const destroyChart = id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } };
+const isOverdue = d => { if (!d) return false; const p = d instanceof Date ? d : new Date(d); return !isNaN(p) && p < new Date(); };
+
+function statusClass(s) {
+  s = String(s||'').toLowerCase();
+  if (s.includes('complet')||s.includes('cerrad')||s.includes('verde')) return 'bg';
+  if (s.includes('curso')||s.includes('progres')||s.includes('mitiga')||s.includes('amarill')) return 'bb';
+  if (s.includes('retrasa')||s.includes('vencid')||s.includes('rojo')) return 'br';
+  if (s.includes('pendient')||s.includes('abiert')) return 'ba';
+  return 'bk';
+}
+function sevClass(s) {
+  s = String(s||'').toLowerCase();
+  if (s==='alto'||s==='alta') return 'br';
+  if (s==='medio'||s==='media') return 'ba';
+  if (s==='bajo'||s==='baja') return 'bg';
+  return 'bk';
+}
+function msClass(s) {
+  s = String(s||'').toLowerCase();
+  if (s.includes('complet')) return 'pg';
+  if (s.includes('curso')) return 'pb';
+  if (s.includes('retras')) return 'pr';
+  return 'py';
+}
+
+// ══════════════════════════════════════════════
+// SIDEBAR
+// ══════════════════════════════════════════════
+function renderSidebar(c) {
+  document.getElementById('projName').textContent = c.PROYECTO || 'Sin nombre';
+  document.getElementById('projClient').textContent = c.CLIENTE ? '🏢 ' + c.CLIENTE : '';
+  document.getElementById('projDate').textContent = c.FECHA ? '📅 ' + c.FECHA : '';
+  document.getElementById('topbarTitle').textContent = c.PROYECTO || 'Dashboard KPI';
+  document.getElementById('topbarPM').textContent = c.PM ? '👤 ' + c.PM : '';
+  const rag = String(c.RAG||'').toLowerCase();
+  let cls = 'rag-a', lbl = 'En seguimiento';
+  if (rag==='green'||rag==='verde') { cls='rag-g'; lbl='En Objetivo'; }
+  else if (rag==='red'||rag==='rojo') { cls='rag-r'; lbl='En Riesgo'; }
+  document.getElementById('ragBadge').innerHTML = `<span class="rag-dot ${cls}">${lbl}</span>`;
+}
+
+// ══════════════════════════════════════════════
+// RESUMEN EJECUTIVO
+// ══════════════════════════════════════════════
+function renderResumen(d) {
+  const cfg = d.config || DEMO.config;
+  const pres = d.presupuesto || DEMO.presupuesto;
+  const ries = d.riesgos || DEMO.riesgos;
+  const cron = d.cronograma || DEMO.cronograma;
+  const gov = d.gobierno || DEMO.gobierno;
+
+  const {real, base} = calcAvance(cron);
+  const diff = real - base;
+  document.getElementById('k-avreal').innerHTML = `${real.toFixed(0)}<span class="unit">%</span>`;
+  document.getElementById('k-avsub').innerHTML = `<span class="${diff>=0?'pos':'neg'}">${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(1)}% vs base</span>`;
+  document.getElementById('k-avbar').style.width = real.toFixed(0) + '%';
+
+  const totB = pres.reduce((s,r) => s+(+r.Presupuesto||0), 0);
+  const totE = pres.reduce((s,r) => s+(+r.Ejecutado||0), 0);
+  const bpct = totB ? (totE/totB*100) : 0;
+  document.getElementById('k-budpct').innerHTML = `${bpct.toFixed(1)}<span class="unit">%</span>`;
+  document.getElementById('k-budsub').textContent = 'de ' + fmt(totB);
+  document.getElementById('k-budbar').style.width = Math.min(bpct,100) + '%';
+
+  const act = ries.filter(r => !/cerrad/i.test(r.Estado||''));
+  const alto = act.filter(r => /^alto$/i.test(r.Severidad||'')).length;
+  const medio = act.filter(r => /^medio$/i.test(r.Severidad||'')).length;
+  const bajo = act.filter(r => /^bajo$/i.test(r.Severidad||'')).length;
+  document.getElementById('k-rtotal').textContent = act.length;
+  document.getElementById('k-rsub').textContent = `${alto} Alto | ${medio} Medio | ${bajo} Bajo`;
+  document.getElementById('sr-alto').textContent = alto;
+  document.getElementById('sr-medio').textContent = medio;
+  document.getElementById('sr-bajo').textContent = bajo;
+
+  const accItems = gov.filter(g => /accion/i.test(g.Tipo||''));
+  const accOpen = accItems.filter(a => !/cerrad|complet/i.test(a.Estado||''));
+  const accVenc = accOpen.filter(a => isOverdue(a.Fecha_Limite));
+  document.getElementById('k-acc').textContent = accOpen.length;
+  document.getElementById('k-accsub').textContent = accVenc.length + ' vencidas';
+
+  document.getElementById('sm-comp').textContent = cron.filter(c=>/complet/i.test(c.Estado||'')).length;
+  document.getElementById('sm-cur').textContent  = cron.filter(c=>/curso/i.test(c.Estado||'')).length;
+  document.getElementById('sm-ret').textContent  = cron.filter(c=>/retras/i.test(c.Estado||'')).length;
+  document.getElementById('sm-pend').textContent = cron.filter(c=>/pendient/i.test(c.Estado||'')).length;
+
+  const fases = [...new Set(cron.map(c => c.Fase||'Sin fase'))];
+  const faseReal = fases.map(f => {
+    const rows = cron.filter(c=>(c.Fase||'Sin fase')===f);
+    const tw = rows.reduce((s,c)=>s+(+c.Peso||1),0);
+    return tw ? rows.reduce((s,c)=>s+(+c.Avance_Real||+c.Avance||0)*(+c.Peso||1),0)/tw : 0;
+  });
+  const faseBase = fases.map(f => {
+    const rows = cron.filter(c=>(c.Fase||'Sin fase')===f);
+    const tw = rows.reduce((s,c)=>s+(+c.Peso||1),0);
+    return tw ? rows.reduce((s,c)=>s+(+c.Avance_Base||0)*(+c.Peso||1),0)/tw : 0;
+  });
+  destroyChart('chartAvance');
+  charts.chartAvance = new Chart(document.getElementById('chartAvance'), {
+    type:'bar',
+    data:{labels:fases,datasets:[
+      {label:'Real',data:faseReal.map(v=>+v.toFixed(1)),backgroundColor:'#FFE600',borderRadius:4},
+      {label:'Base (Plan)',data:faseBase.map(v=>+v.toFixed(1)),backgroundColor:'rgba(255,255,255,0.15)',borderRadius:4}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}}},scales:{
+      x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1'}},
+      y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1',callback:v=>v+'%'}}
+    }}
+  });
+
+  const capExec = pres.filter(r=>/capex/i.test(r.Categoria||'')).reduce((s,r)=>s+(+r.Ejecutado||0),0);
+  const opExec = pres.filter(r=>/opex/i.test(r.Categoria||'')).reduce((s,r)=>s+(+r.Ejecutado||0),0);
+  destroyChart('chartDonut');
+  charts.chartDonut = new Chart(document.getElementById('chartDonut'), {
+    type:'doughnut',
+    data:{labels:['CAPEX','OPEX'],datasets:[{data:[capExec,opExec],backgroundColor:['#FFE600','#0066CC'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}
+  });
+
+  destroyChart('chartRiskBar');
+  charts.chartRiskBar = new Chart(document.getElementById('chartRiskBar'), {
+    type:'bar',
+    data:{labels:['Alto','Medio','Bajo'],datasets:[{data:[alto,medio,bajo],backgroundColor:['#D0021B','#FF8C00','#168736'],borderRadius:4}]},
+    options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{
+      x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1'}},
+      y:{grid:{display:false},ticks:{color:'#9897A1'}}
+    }}
+  });
+}
+
+// ══════════════════════════════════════════════
+// PRESUPUESTO
+// ══════════════════════════════════════════════
+function renderPresupuesto(d) {
+  const pres = d.presupuesto || DEMO.presupuesto;
+  const totB = pres.reduce((s,r)=>s+(+r.Presupuesto||0),0);
+  const totE = pres.reduce((s,r)=>s+(+r.Ejecutado||0),0);
+  const pct = totB ? (totE/totB*100) : 0;
+  const varAmt = totB - totE;
+  document.getElementById('p-total').textContent = fmt(totB);
+  document.getElementById('p-exec').textContent = fmt(totE);
+  document.getElementById('p-pct').innerHTML = `${pct.toFixed(1)}<span class="unit">%</span>`;
+  document.getElementById('p-var').textContent = fmt(Math.abs(varAmt));
+  document.getElementById('p-varsub').textContent = varAmt>=0?'disponible':'sobre presupuesto';
+
+  const cats = [...new Set(pres.map(r=>r.Categoria))];
+  const catB = cats.map(c=>pres.filter(r=>r.Categoria===c).reduce((s,r)=>s+(+r.Presupuesto||0),0));
+  const catE = cats.map(c=>pres.filter(r=>r.Categoria===c).reduce((s,r)=>s+(+r.Ejecutado||0),0));
+
+  destroyChart('chartCapexOpex');
+  charts.chartCapexOpex = new Chart(document.getElementById('chartCapexOpex'),{
+    type:'bar',
+    data:{labels:cats,datasets:[
+      {label:'Presupuesto',data:catB,backgroundColor:'rgba(255,255,255,0.15)',borderRadius:4},
+      {label:'Ejecutado',data:catE,backgroundColor:'#FFE600',borderRadius:4}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},scales:{
+      x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1'}},
+      y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1',callback:v=>fmt(v)}}
+    }}
+  });
+
+  const pctByCat = cats.map((c,i)=>catB[i]?(catE[i]/catB[i]*100):0);
+  destroyChart('chartExecPct');
+  charts.chartExecPct = new Chart(document.getElementById('chartExecPct'),{
+    type:'bar',
+    data:{labels:cats,datasets:[{label:'% Ejecutado',data:pctByCat,backgroundColor:pctByCat.map(p=>p>100?'#D0021B':p>80?'#FF8C00':'#168736'),borderRadius:4}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{
+      x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1'}},
+      y:{min:0,max:Math.max(120,...pctByCat)+5,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1',callback:v=>v+'%'}}
+    }}
+  });
+
+  document.getElementById('tblPres').innerHTML = pres.map(r=>{
+    const b=+r.Presupuesto||0, e=+r.Ejecutado||0, v=b-e, p=b?(e/b*100):0;
+    const sc=p>100?'br':p>80?'ba':'bg', sl=p>100?'Sobre presupuesto':p>80?'En límite':'En control';
+    return `<tr>
+      <td><span class="badge ${/capex/i.test(r.Categoria||'')?'bb':'bk'}">${r.Categoria||''}</span></td>
+      <td>${r.Item||''}</td>
+      <td style="text-align:right">${fmt(b)}</td>
+      <td style="text-align:right">${fmt(e)}</td>
+      <td style="text-align:right;color:${v>=0?'#2ecc71':'#ff4757'}">${v>=0?'−':'+'} ${fmt(Math.abs(v))}</td>
+      <td style="text-align:right">${p.toFixed(1)}%</td>
+      <td><span class="badge ${sc}">${sl}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// RIESGOS
+// ══════════════════════════════════════════════
+function renderRiesgos(d) {
+  const ries = d.riesgos || DEMO.riesgos;
+  const act = ries.filter(r=>!/cerrad/i.test(r.Estado||''));
+  const alto=act.filter(r=>/^alto$/i.test(r.Severidad||'')).length;
+  const medio=act.filter(r=>/^medio$/i.test(r.Severidad||'')).length;
+  const bajo=act.filter(r=>/^bajo$/i.test(r.Severidad||'')).length;
+  document.getElementById('r-alto').textContent=alto;
+  document.getElementById('r-medio').textContent=medio;
+  document.getElementById('r-bajo').textContent=bajo;
+  document.getElementById('r-act').textContent=act.length;
+
+  // Heatmap: rows=Probabilidad (Alta,Media,Baja), cols=Impacto (Bajo,Medio,Alto)
+  const PROBS=['Alta','Media','Baja'], IMPS=['Bajo','Medio','Alto'];
+  const SEV={'Alta-Bajo':'md','Alta-Medio':'hi','Alta-Alto':'hi','Media-Bajo':'lo','Media-Medio':'md','Media-Alto':'hi','Baja-Bajo':'lo','Baja-Medio':'lo','Baja-Alto':'md'};
+  let hm = `<div style="text-align:center;font-size:9px;color:var(--gray);margin-bottom:4px;margin-left:56px;letter-spacing:1px">IMPACTO →</div>
+  <div class="hm-col-labels"><div></div>${IMPS.map(i=>`<div class="hm-col-label">${i}</div>`).join('')}</div>`;
+  PROBS.forEach(p=>{
+    hm += `<div class="hm-row"><div class="hm-row-label">${p}</div>`;
+    IMPS.forEach(imp=>{
+      const sev=SEV[`${p}-${imp}`]||'lo';
+      const items=act.filter(r=>new RegExp('^'+p+'$','i').test(r.Probabilidad||'')&&new RegExp('^'+imp+'$','i').test(r.Impacto||''));
+      const ids=items.map(r=>r.ID).join(', ');
+      hm+=`<div class="hm-cell hm-${sev}"><div class="cnt">${items.length||'—'}</div>${ids?`<div class="ids">${ids}</div>`:''}</div>`;
+    });
+    hm+='</div>';
+  });
+  document.getElementById('riskHeatmap').innerHTML=hm;
+
+  const statuses=[...new Set(ries.map(r=>r.Estado||'Sin estado'))];
+  destroyChart('chartRiskStatus');
+  charts.chartRiskStatus=new Chart(document.getElementById('chartRiskStatus'),{
+    type:'doughnut',
+    data:{labels:statuses,datasets:[{data:statuses.map(s=>ries.filter(r=>(r.Estado||'Sin estado')===s).length),
+      backgroundColor:statuses.map(s=>/activ/i.test(s)?'#D0021B':/mitiga/i.test(s)?'#0066CC':/cerrad/i.test(s)?'#168736':'#6B6B7B'),borderWidth:0}]},
+    options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}
+  });
+
+  document.getElementById('tblRiesgos').innerHTML=ries.map(r=>`<tr>
+    <td style="font-weight:700;color:var(--yellow)">${r.ID||''}</td>
+    <td>${r.Descripcion||''}</td>
+    <td><span class="badge ${sevClass(r.Probabilidad)}">${r.Probabilidad||''}</span></td>
+    <td><span class="badge ${sevClass(r.Impacto)}">${r.Impacto||''}</span></td>
+    <td><span class="badge ${sevClass(r.Severidad)}">${r.Severidad||''}</span></td>
+    <td>${r.Propietario||''}</td>
+    <td><span class="badge ${statusClass(r.Estado)}">${r.Estado||''}</span></td>
+    <td style="color:var(--gray);font-size:12px">${r.Plan_Mitigacion||''}</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// CRONOGRAMA
+// ══════════════════════════════════════════════
+function renderCronograma(d) {
+  const cron = d.cronograma || DEMO.cronograma;
+  const {real, base} = calcAvance(cron);
+  const diff = real - base;
+  const comp  = cron.filter(c=>/complet/i.test(c.Estado||'')).length;
+  const ret   = cron.filter(c=>/retras/i.test(c.Estado||'')).length;
+  const pend  = cron.filter(c=>/pendient/i.test(c.Estado||'')).length;
+  document.getElementById('c-av').innerHTML = `${real.toFixed(0)}<span class="unit">%</span>`;
+  document.getElementById('c-avsub').innerHTML = `<span class="${diff>=0?'pos':'neg'}">${diff>=0?'▲':'▼'} ${Math.abs(diff).toFixed(1)}% vs base</span>`;
+  document.getElementById('c-avbar').style.width = real.toFixed(0) + '%';
+  document.getElementById('c-comp').textContent = comp;
+  document.getElementById('c-ret').textContent  = ret;
+  document.getElementById('c-pend').textContent = pend;
+
+  // ── Phase summary cards
+  const fases = [...new Set(cron.map(c=>c.Fase||'Sin fase'))];
+  document.getElementById('phaseSummary').innerHTML = fases.map(f => {
+    const rows = cron.filter(c=>(c.Fase||'Sin fase')===f);
+    const tw = rows.reduce((s,c)=>s+(+c.Peso||1),0);
+    const r  = tw ? rows.reduce((s,c)=>s+(+c.Avance_Real||+c.Avance||0)*(+c.Peso||1),0)/tw : 0;
+    const b  = tw ? rows.reduce((s,c)=>s+(+c.Avance_Base||0)*(+c.Peso||1),0)/tw : 0;
+    const d2 = r - b;
+    const allDone = rows.every(c=>/complet/i.test(c.Estado||''));
+    const anyRet  = rows.some(c=>/retras/i.test(c.Estado||''));
+    const anyPend = rows.every(c=>/pendient/i.test(c.Estado||''));
+    const cls = allDone ? 'pc-done' : anyRet ? 'pc-bad' : anyPend ? 'pc-pend' : 'pc-warn';
+    const pctColor = allDone ? '#2ecc71' : anyRet ? '#ff4757' : r>=b ? '#FFE600' : 'var(--amber)';
+    return `<div class="phase-card ${cls}">
+      <div class="ph-name">${f}</div>
+      <div class="ph-pct" style="color:${pctColor}">${r.toFixed(0)}%</div>
+      <div class="ph-base">Base: ${b.toFixed(0)}%</div>
+      <div class="ph-delta" style="color:${d2>=0?'#2ecc71':'#ff4757'}">${d2>=0?'▲':'▼'} ${Math.abs(d2).toFixed(1)}%</div>
+      <div class="ph-acts">${rows.length} actividad${rows.length!==1?'es':''}</div>
+    </div>`;
+  }).join('');
+
+  // ── Chart: actividades individuales (Real + Base)
+  destroyChart('chartCronograma');
+  charts.chartCronograma = new Chart(document.getElementById('chartCronograma'), {
+    type:'bar',
+    data:{labels:cron.map(c=>c.Actividad||c.Hito||''),datasets:[
+      {label:'Avance Real',data:cron.map(c=>+c.Avance_Real||+c.Avance||0),
+        backgroundColor:cron.map(c=>/complet/i.test(c.Estado||'')?'#168736':/curso/i.test(c.Estado||'')?'#0066CC':/retras/i.test(c.Estado||'')?'#D0021B':'#4A4A5C'),
+        borderRadius:3},
+      {label:'Base (Plan)',data:cron.map(c=>+c.Avance_Base||0),
+        backgroundColor:'rgba(255,255,255,0.08)',borderRadius:3}
+    ]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}}},scales:{
+      x:{min:0,max:100,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#9897A1',callback:v=>v+'%'}},
+      y:{grid:{display:false},ticks:{color:'#C4C4CC',font:{size:10}}}
+    }}
+  });
+
+  // ── Activity list
+  document.getElementById('msList').innerHTML =
+    `<div class="ms-row" style="background:rgba(0,0,0,.2);font-size:10px;color:var(--gray);font-weight:600;letter-spacing:.5px">
+      <div>ACTIVIDAD</div><div>FASE</div><div>RESPONSABLE</div><div>PROGRESO</div><div>ESTADO</div>
+    </div>` +
+    cron.map(c => {
+      const r = +c.Avance_Real||+c.Avance||0;
+      const b = +c.Avance_Base||0;
+      const d2 = r - b;
+      return `<div class="ms-row">
+        <div>
+          <div class="ms-name">${c.Actividad||c.Hito||''}</div>
+          <div class="ms-meta">${fmtDate(c.Fecha_Inicio)} → ${fmtDate(c.Fecha_Fin)}</div>
+        </div>
+        <div><span class="badge bk">${c.Fase||''}</span></div>
+        <div style="font-size:12px;color:var(--gray-light)">${c.Responsable||'—'}</div>
+        <div>
+          <div class="ibar" style="height:5px"><div class="ibar-fill ${msClass(c.Estado)}" style="width:${r}%"></div></div>
+          <div class="ms-pct-lbl">
+            <span>${r}% real</span>
+            <span style="color:${d2>=0?'#2ecc71':'#ff4757'}">${d2>=0?'▲':'▼'}${Math.abs(d2).toFixed(0)}%</span>
+          </div>
+        </div>
+        <div><span class="badge ${statusClass(c.Estado)}">${c.Estado||''}</span></div>
+      </div>`;
+    }).join('');
+}
+
+// ══════════════════════════════════════════════
+// GOBIERNO
+// ══════════════════════════════════════════════
+function renderGobierno(d) {
+  const gov = d.gobierno || DEMO.gobierno;
+  const fill = (items, id) => {
+    document.getElementById(id).innerHTML = items.map(g=>{
+      const ov = isOverdue(g.Fecha_Limite) && !/cerrad|complet/i.test(g.Estado||'');
+      return `<tr style="${ov?'background:rgba(208,2,27,0.07)':''}">
+        <td style="font-weight:700;color:var(--yellow)">${g.ID||''}</td>
+        <td>${g.Descripcion||''}</td>
+        <td>${g.Propietario||''}</td>
+        <td style="color:${ov?'#ff4757':'var(--gray-light)'}">${fmtDate(g.Fecha_Limite)}${ov?' ⚠️':''}</td>
+        <td><span class="badge ${statusClass(g.Estado)}">${g.Estado||''}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:20px">Sin registros</td></tr>';
+  };
+  fill(gov.filter(g=>/decis/i.test(g.Tipo||'')), 'tblDec');
+  fill(gov.filter(g=>/issue/i.test(g.Tipo||'')), 'tblIss');
+  fill(gov.filter(g=>/accion/i.test(g.Tipo||'')), 'tblAcc');
+}
+
+// ══════════════════════════════════════════════
+// INDICADORES
+// ══════════════════════════════════════════════
+function renderIndicadores(d) {
+  const kpis = d.kpis || DEMO.kpis;
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>{
+    const meta=+k.Meta, real=+k.Real, u=k.Unidad||'';
+    const est=String(k.Estado||'').toLowerCase();
+    let color, bg;
+    if (est.includes('verde')||est==='green') { color='#2ecc71'; bg='var(--green-bg)'; }
+    else if (est.includes('amarill')||est==='yellow') { color='var(--amber)'; bg='var(--amber-bg)'; }
+    else { color='#ff4757'; bg='var(--red-bg)'; }
+    const trend=String(k.Tendencia||'').toLowerCase();
+    const ti=trend.includes('sube')||trend.includes('up')?'↑':trend.includes('baja')||trend.includes('down')?'↓':'→';
+    const tc=(trend.includes('sube')&&u!=='#')||trend.includes('up')?'#2ecc71':'#ff4757';
+    const pct=meta&&!isNaN(meta)&&!isNaN(real)?Math.min(real/meta*100,150):0;
+    const fillCls=pct>=100?'pg':pct>=75?'pa':'pr';
+    return `<div class="kd-card" style="border-top:3px solid ${color}">
+      <div class="kd-name">${k.KPI||''}</div>
+      <div class="kd-vals">
+        <div class="kd-real" style="color:${color}">${isNaN(real)?'—':real}${u}</div>
+        <div class="kd-meta">Meta: ${isNaN(meta)?'—':meta}${u}</div>
+        <div class="kd-trend" style="color:${tc}">${ti} ${k.Tendencia||''}</div>
+      </div>
+      <div class="ibar"><div class="ibar-fill ${fillCls}" style="width:${Math.min(pct,100)}%"></div></div>
+      <div class="kd-pctlbl">${isNaN(pct)?'—':pct.toFixed(1)}% de la meta</div>
+      <div style="margin-top:8px"><span class="badge" style="background:${bg};color:${color}">${k.Estado||''}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// TEMPLATE DOWNLOAD
+// ══════════════════════════════════════════════
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const s = (data, name) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), name);
+  s([
+    ['Clave','Valor','Descripción'],
+    ['PROYECTO','Nombre del Proyecto','Nombre completo del proyecto'],
+    ['CLIENTE','Cliente S.A.','Razón social del cliente'],
+    ['PM','Nombre PM','Project Manager responsable'],
+    ['FECHA','18 Junio 2026','Fecha del reporte (texto libre)'],
+    ['RAG','Amber','Estado RAG: Green / Amber / Red'],
+  ],'CONFIG');
+  s([
+    ['KPI','Unidad','Meta','Real','Tendencia','Estado'],
+    ['Disponibilidad Sistema','%',99.5,98.2,'Baja','Rojo'],
+    ['Tiempo de Respuesta','ms',200,185,'Sube','Verde'],
+    ['Satisfacción Usuario','%',85,78,'Sube','Amarillo'],
+    ['Cobertura de Pruebas','%',80,72,'Sube','Amarillo'],
+    ['Incidentes Críticos','#',0,2,'Baja','Rojo'],
+    ['Entregables a Tiempo','%',90,85,'Sube','Verde'],
+  ],'KPIs');
+  s([
+    ['Categoria','Item','Presupuesto','Ejecutado'],
+    ['CAPEX','Infraestructura Cloud',80000,72000],
+    ['CAPEX','Licencias Software',45000,44800],
+    ['OPEX','Consultores',120000,95000],
+    ['OPEX','Personal Interno',60000,48000],
+    ['OPEX','Capacitaciones',15000,12500],
+  ],'PRESUPUESTO');
+  s([
+    ['ID','Descripcion','Probabilidad','Impacto','Severidad','Propietario','Estado','Plan_Mitigacion'],
+    ['R-01','Retraso en migración de datos','Alta','Alto','Alto','TI Lead','Activo','Plan de contingencia con rollback'],
+    ['R-02','Resistencia al cambio usuarios','Alta','Medio','Alto','Change Mgr','En mitigación','Programa de comunicación'],
+    ['R-03','Integración API terceros','Media','Medio','Medio','Arquitecto','Activo','Pruebas de integración tempranas'],
+  ],'RIESGOS');
+  s([
+    ['Fase','Actividad','Peso','Avance_Real','Avance_Base','Estado','Responsable','Fecha_Inicio','Fecha_Fin'],
+    ['Análisis','Levantamiento de requerimientos',3,100,100,'Completado','PM','2026-01-15','2026-01-30'],
+    ['Análisis','Validación con stakeholders',2,100,100,'Completado','PM','2026-01-31','2026-02-14'],
+    ['Diseño','Arquitectura técnica',4,100,100,'Completado','Arquitecto','2026-03-01','2026-03-20'],
+    ['Diseño','Diseño de base de datos',3,100,100,'Completado','DBA Lead','2026-03-10','2026-03-31'],
+    ['Desarrollo','Sprint 1 — Core backend',5,100,100,'Completado','Dev Lead','2026-04-01','2026-04-30'],
+    ['Desarrollo','Sprint 2 — Frontend',4,75,90,'En curso','Dev Lead','2026-05-01','2026-05-31'],
+    ['Desarrollo','Sprint 3 — Integraciones',4,30,60,'Retrasado','Arquitecto','2026-05-15','2026-06-15'],
+    ['UAT','Preparación ambiente UAT',2,20,50,'Retrasado','TI Lead','2026-06-01','2026-06-15'],
+    ['UAT','Pruebas funcionales con usuarios',4,0,0,'Pendiente','PM','2026-06-16','2026-06-30'],
+    ['Go-Live','Cutover y puesta en marcha',5,0,0,'Pendiente','PM','2026-07-31','2026-07-31'],
+  ],'CRONOGRAMA');
+  s([
+    ['Tipo','ID','Descripcion','Propietario','Fecha_Limite','Estado'],
+    ['Decision','D-01','Selección de proveedor cloud','CTO','2026-02-01','Cerrado'],
+    ['Decision','D-02','Definición de SLAs de producción','PM','2026-06-30','Abierto'],
+    ['Issue','I-01','Acceso a datos de producción para pruebas','DBA Lead','2026-06-20','Abierto'],
+    ['Issue','I-02','Disponibilidad del equipo cliente reducida','PM','2026-06-10','Vencido'],
+    ['Accion','A-01','Revisar y firmar SLAs con TI cliente','PM','2026-06-25','Pendiente'],
+    ['Accion','A-02','Actualizar plan de capacitación','Change Mgr','2026-06-30','En progreso'],
+  ],'GOBIERNO');
+  XLSX.writeFile(wb, 'dashboard-template.xlsx');
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('topbarDate').textContent = '📅 ' + new Date().toLocaleDateString('es-CL',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  renderSidebar(DEMO.config);
+  renderResumen(DEMO);
+  renderGobierno(DEMO);
+  renderIndicadores(DEMO);
+});
+</script>
+</body>
+</html>
