@@ -36,8 +36,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-bg text-fg">
         <StoreProvider>
           <main
-            className="mx-auto w-full max-w-[520px] px-4 pt-3"
-            style={{ paddingBottom: "calc(84px + env(safe-area-inset-bottom))" }}
+            className="mx-auto w-full max-w-[520px] px-4"
+            /**
+             * Instalada en la pantalla de inicio, la barra de estado del iPhone
+             * (hora, señal, batería) flota SOBRE el contenido: con
+             * `black-translucent` + `viewport-fit=cover` la página empieza en y=0.
+             * Estos dos insets son lo que la baja bajo el reloj y la sube sobre la
+             * barra de gestos. En Safari valen 0 y no cambian nada.
+             */
+            style={{
+              paddingTop: "calc(12px + env(safe-area-inset-top))",
+              paddingBottom: "calc(84px + env(safe-area-inset-bottom))",
+            }}
           >
             {children}
           </main>
