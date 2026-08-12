@@ -2,17 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import NumberField from "@/components/NumberField";
+import PaceField from "@/components/PaceField";
 import { longLabel, todayKey } from "@/lib/dates";
 import { currentStreak } from "@/lib/stats";
 import { useStore } from "@/lib/StoreProvider";
 import {
+  DEFAULT_DISTANCE_KM,
+  DEFAULT_PACE_SEC,
+  STRENGTH_TYPES,
   WORKOUT_LABELS,
-  WORKOUT_TYPES,
+  formatMinutes,
+  runDurationMin,
   type DailyLog,
   type Mood,
   type WorkoutLog,
   type WorkoutType,
 } from "@/lib/types";
+
+const MIN_KM = 1;
+const MAX_KM = 30;
 
 export default function HomePage() {
   const { ready, days, workouts, upsertDay, upsertWorkout, removeWorkout } = useStore();
@@ -32,6 +40,8 @@ export default function HomePage() {
 
   const log: DailyLog = (today && days[today]) || { date: today };
   const todayWorkouts = workouts.filter((w) => w.date === today);
+  const strengthToday = todayWorkouts.filter((w) => w.type !== "running");
+  const run = todayWorkouts.find((w) => w.type === "running");
 
   // Las kcal se autocalculan desde los macros hasta que se escriben a mano; a partir
   // de ahí manda el número de Cronometer y dejamos de tocarlo.
@@ -64,16 +74,11 @@ export default function HomePage() {
     patch(p);
   }
 
-  function toggleWorkout(type: WorkoutType) {
-    const existing = todayWorkouts.find((w) => w.type === type);
+  function toggleStrength(type: WorkoutType) {
+    const existing = strengthToday.find((w) => w.type === type);
     if (existing) removeWorkout(existing.id);
     else
-      upsertWorkout({
-        id: crypto.randomUUID(),
-        date: today,
-        type,
-        completed: true,
-      });
+      upsertWorkout({ id: crypto.randomUUID(), date: today, type, completed: true });
     flashSaved();
   }
 
@@ -82,12 +87,29 @@ export default function HomePage() {
     flashSaved();
   }
 
+  function toggleRun() {
+    if (run) removeWorkout(run.id);
+    else
+      upsertWorkout({
+        id: crypto.randomUUID(),
+        date: today,
+        type: "running",
+        completed: true,
+        distance_km: DEFAULT_DISTANCE_KM,
+        pace_sec_per_km: DEFAULT_PACE_SEC,
+      });
+    flashSaved();
+  }
+
   if (!ready || !today) return <HomeSkeleton />;
 
   const streak = currentStreak(days, today);
+  const runMinutes = run ? runDurationMin(run) : undefined;
 
   return (
-    <div className="space-y-4">
+    // space-y-3, no 4: con fuerza y running abiertos el formulario completo cabe
+    // justo en una pantalla de iPhone, y ese es el punto de toda la app.
+    <div className="space-y-3">
       <header className="flex items-start justify-between gap-3 pt-1">
         <div className="min-w-0">
           <h1 className="text-[27px] font-bold leading-none">Hoy</h1>
@@ -171,19 +193,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. Entrenos — un tap marca la sesión y despliega RPE y duración. */}
+      {/* 3. Fuerza — un tap marca la sesión y despliega solo la duración. */}
       <section className="rounded-2xl border border-border bg-surface/60 p-3">
-        <h2 className="mb-2 text-[13px] font-semibold text-muted">Entrenos de hoy</h2>
-        <div className="flex flex-wrap gap-2">
-          {WORKOUT_TYPES.map((type) => {
-            const active = todayWorkouts.some((w) => w.type === type);
+        <h2 className="mb-2 text-[13px] font-semibold text-muted">Fuerza</h2>
+        <div className="flex gap-2">
+          {STRENGTH_TYPES.map((type) => {
+            const active = strengthToday.some((w) => w.type === type);
             return (
               <button
                 key={type}
                 type="button"
                 aria-pressed={active}
-                onClick={() => toggleWorkout(type)}
-                className={`h-11 min-w-[68px] rounded-xl border px-3 text-[15px] font-semibold transition-colors ${
+                onClick={() => toggleStrength(type)}
+                className={`h-12 flex-1 rounded-xl border px-2 text-[15px] font-semibold transition-colors ${
                   active
                     ? "border-accent bg-accent text-accent-fg"
                     : "border-border bg-bg text-fg"
@@ -195,38 +217,21 @@ export default function HomePage() {
           })}
         </div>
 
-        {todayWorkouts.length > 0 && (
+        {strengthToday.length > 0 && (
           <ul className="mt-3 space-y-2">
-            {todayWorkouts.map((w) => (
-              <li key={w.id} className="rounded-xl bg-bg p-3">
-                <div className="mb-1.5 flex items-baseline justify-between">
-                  <span className="text-[14px] font-semibold">
-                    {WORKOUT_LABELS[w.type]}
-                  </span>
-                  <span className="text-[13px] tabular-nums text-muted">
-                    RPE {w.rpe ?? "—"}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={w.rpe ?? 7}
-                  aria-label={`RPE de ${WORKOUT_LABELS[w.type]}`}
-                  onChange={(e) => editWorkout(w, { rpe: Number(e.target.value) })}
-                  className="h-7 w-full"
-                />
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-[12px] text-muted">Duración</span>
-                  <div className="w-24">
-                    <NumberField
-                      value={w.duration_min}
-                      onCommit={(v) => editWorkout(w, { duration_min: v })}
-                      placeholder="min"
-                      ariaLabel={`Duración de ${WORKOUT_LABELS[w.type]} en minutos`}
-                    />
-                  </div>
+            {strengthToday.map((w) => (
+              <li key={w.id} className="flex items-center gap-3 rounded-xl bg-bg px-3 py-2">
+                <span className="flex-1 text-[14px] font-semibold">
+                  {WORKOUT_LABELS[w.type]}
+                </span>
+                <span className="text-[12px] text-muted">Duración</span>
+                <div className="w-24">
+                  <NumberField
+                    value={w.duration_min}
+                    onCommit={(v) => editWorkout(w, { duration_min: v })}
+                    placeholder="min"
+                    ariaLabel={`Duración de ${WORKOUT_LABELS[w.type]} en minutos`}
+                  />
                 </div>
               </li>
             ))}
@@ -234,7 +239,75 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 4. Opcional — colapsado para que no empuje nada de lo anterior. */}
+      {/* 4. Running — distancia con slider y ritmo; el tiempo se deriva de ambos. */}
+      <section className="rounded-2xl border border-border bg-surface/60 p-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold text-muted">Running</h2>
+          {run && (
+            <button
+              type="button"
+              onClick={toggleRun}
+              className="text-[12px] font-medium text-muted underline underline-offset-2"
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+
+        {!run ? (
+          <button
+            type="button"
+            onClick={toggleRun}
+            className="mt-2 h-12 w-full rounded-xl border border-border bg-bg text-[15px] font-semibold text-fg"
+          >
+            Registrar carrera
+          </button>
+        ) : (
+          <div className="mt-2 space-y-3">
+            <div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[12px] text-muted">Distancia</span>
+                <span className="text-[26px] font-bold leading-none tabular-nums">
+                  {(run.distance_km ?? 0).toFixed(1)}
+                  <span className="ml-1 text-[14px] font-medium text-muted">km</span>
+                </span>
+              </div>
+              <input
+                type="range"
+                min={MIN_KM}
+                max={MAX_KM}
+                step={0.5}
+                value={run.distance_km ?? DEFAULT_DISTANCE_KM}
+                aria-label="Distancia en kilómetros"
+                onChange={(e) =>
+                  editWorkout(run, { distance_km: Number(e.target.value) })
+                }
+                className="mt-1.5 h-7 w-full"
+              />
+            </div>
+
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  Ritmo
+                </span>
+                <PaceField
+                  value={run.pace_sec_per_km}
+                  onCommit={(v) => editWorkout(run, { pace_sec_per_km: v })}
+                />
+              </div>
+              {runMinutes != null && (
+                <p className="pb-3.5 text-right text-[13px] tabular-nums text-muted">
+                  {formatMinutes(runMinutes)}
+                  <span className="block text-[11px]">en total</span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* 5. Opcional — colapsado para que no empuje nada de lo anterior. */}
       <details className="rounded-2xl border border-border bg-surface/60">
         <summary className="cursor-pointer list-none px-3 py-3 text-[13px] font-semibold text-muted marker:hidden">
           Opcional · ánimo, sueño, notas

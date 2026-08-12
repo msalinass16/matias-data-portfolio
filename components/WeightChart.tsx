@@ -109,7 +109,7 @@ export default function WeightChart({ keys, days, ma, goals }: Props) {
         ))}
 
         {present.map((p) => (
-          <circle key={p.i} cx={x(p.i)} cy={y(p.v)} r={2} fill="var(--muted)" opacity={0.55} />
+          <circle key={p.i} cx={x(p.i)} cy={y(p.v)} r={2} fill="var(--chart-2)" opacity={0.7} />
         ))}
 
         {segments.map((d, i) => (
@@ -156,7 +156,7 @@ export default function WeightChart({ keys, days, ma, goals }: Props) {
       <figcaption className="mt-1 flex items-center gap-3 text-[11px] text-muted">
         <span className="flex items-center gap-1.5">
           <svg width="14" height="8" aria-hidden>
-            <circle cx="7" cy="4" r="2" fill="var(--muted)" opacity="0.55" />
+            <circle cx="7" cy="4" r="2" fill="var(--chart-2)" opacity="0.7" />
           </svg>
           Peso diario
         </span>

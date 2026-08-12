@@ -5,7 +5,43 @@ const K_DAYS = "fit:days";
 const K_WORKOUTS = "fit:workouts";
 const K_GOALS = "fit:goals";
 const K_VERSION = "fit:v";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+
+/**
+ * v1 tenía push/pull/lower/full/5k/10k/otro y un campo `rpe`. v2 deja tres tipos de
+ * fuerza y un único `running` con distancia y ritmo. Se remapea al cargar para que
+ * los entrenos ya registrados no queden con un tipo que la app ya no sabe pintar.
+ */
+const V1_TYPE_MAP: Record<string, string> = {
+  fuerza_push: "fuerza_upper",
+  fuerza_pull: "fuerza_upper",
+  fuerza_lower: "fuerza_lower",
+  fuerza_full: "fuerza_full",
+  otro: "fuerza_full",
+  running_5k: "running",
+  running_10k: "running",
+};
+
+const V1_DISTANCE: Record<string, number> = {
+  running_5k: 5,
+  running_10k: 10,
+};
+
+function migrateWorkouts(raw: WorkoutLog[]): WorkoutLog[] {
+  return raw.map((w) => {
+    const oldType = w.type as string;
+    const mapped = V1_TYPE_MAP[oldType];
+    if (!mapped) return w;
+
+    const next = { ...w, type: mapped as WorkoutLog["type"] };
+    if (V1_DISTANCE[oldType] != null && next.distance_km == null) {
+      next.distance_km = V1_DISTANCE[oldType];
+    }
+    // `rpe` ya no existe en el modelo; se descarta al reescribir.
+    delete (next as Record<string, unknown>).rpe;
+    return next;
+  });
+}
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -30,12 +66,20 @@ function write(key: string, value: unknown): void {
 
 export const localStore: Store = {
   load(): Snapshot {
-    if (typeof window !== "undefined" && !window.localStorage.getItem(K_VERSION)) {
-      write(K_VERSION, SCHEMA_VERSION);
+    let workouts = read<WorkoutLog[]>(K_WORKOUTS, []);
+
+    if (typeof window !== "undefined") {
+      const stored = Number(window.localStorage.getItem(K_VERSION) ?? 0);
+      if (stored < SCHEMA_VERSION) {
+        workouts = migrateWorkouts(workouts);
+        write(K_WORKOUTS, workouts);
+        write(K_VERSION, SCHEMA_VERSION);
+      }
     }
+
     return {
       days: read<Record<string, DailyLog>>(K_DAYS, {}),
-      workouts: read<WorkoutLog[]>(K_WORKOUTS, []),
+      workouts,
       goals: { ...DEFAULT_GOALS, ...read<Partial<Goals>>(K_GOALS, {}) },
     };
   },
@@ -80,7 +124,8 @@ export const localStore: Store = {
     const parsed = JSON.parse(json) as Partial<Snapshot>;
     if (!parsed || typeof parsed !== "object") throw new Error("Archivo inválido");
     write(K_DAYS, parsed.days ?? {});
-    write(K_WORKOUTS, parsed.workouts ?? []);
+    // Un respaldo viejo puede traer los tipos de v1; se remapea igual que al cargar.
+    write(K_WORKOUTS, migrateWorkouts(parsed.workouts ?? []));
     write(K_GOALS, { ...DEFAULT_GOALS, ...(parsed.goals ?? {}) });
     write(K_VERSION, SCHEMA_VERSION);
   },

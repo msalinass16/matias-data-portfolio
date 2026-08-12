@@ -1,11 +1,8 @@
 export type WorkoutType =
-  | "fuerza_push"
-  | "fuerza_pull"
+  | "fuerza_upper"
   | "fuerza_lower"
   | "fuerza_full"
-  | "running_5k"
-  | "running_10k"
-  | "otro";
+  | "running";
 
 export type Mood = 1 | 2 | 3 | 4 | 5;
 
@@ -22,14 +19,22 @@ export type DailyLog = {
   notes?: string;
 };
 
-/** Una entrada por sesión de entrenamiento. Varias por día. */
+/**
+ * Una entrada por sesión. Fuerza y running usan campos distintos a propósito:
+ * en fuerza solo interesa cuánto duró, y en running la distancia y el ritmo
+ * (de los que se deriva el tiempo).
+ */
 export type WorkoutLog = {
   id: string;
   date: string;
   type: WorkoutType;
   completed: boolean;
-  rpe?: number;
+  /** Solo fuerza. */
   duration_min?: number;
+  /** Solo running. */
+  distance_km?: number;
+  /** Solo running. Segundos por kilómetro: entero, sin decimales que arrastren error. */
+  pace_sec_per_km?: number;
   notes?: string;
 };
 
@@ -53,42 +58,56 @@ export const DEFAULT_GOALS: Goals = {
   weekly_running_sessions_target: 2,
 };
 
-export const WORKOUT_TYPES: WorkoutType[] = [
-  "fuerza_push",
-  "fuerza_pull",
+/** Los tipos que se eligen con un chip. Running tiene su propia sección. */
+export const STRENGTH_TYPES: WorkoutType[] = [
+  "fuerza_upper",
   "fuerza_lower",
   "fuerza_full",
-  "running_5k",
-  "running_10k",
-  "otro",
 ];
 
 export const WORKOUT_LABELS: Record<WorkoutType, string> = {
-  fuerza_push: "Push",
-  fuerza_pull: "Pull",
+  fuerza_upper: "Upper",
   fuerza_lower: "Lower",
   fuerza_full: "Full body",
-  running_5k: "5K",
-  running_10k: "10K",
-  otro: "Otro",
+  running: "Running",
 };
 
 export const WORKOUT_SHORT: Record<WorkoutType, string> = {
-  fuerza_push: "PSH",
-  fuerza_pull: "PLL",
+  fuerza_upper: "UPR",
   fuerza_lower: "LWR",
-  fuerza_full: "FLL",
-  running_5k: "5K",
-  running_10k: "10K",
-  otro: "—",
+  fuerza_full: "FULL",
+  running: "RUN",
 };
+
+export const DEFAULT_DISTANCE_KM = 5;
+export const DEFAULT_PACE_SEC = 360; // 6:00 min/km
 
 export function isStrength(type: WorkoutType): boolean {
   return type.startsWith("fuerza_");
 }
 
 export function isRunning(type: WorkoutType): boolean {
-  return type.startsWith("running_");
+  return type === "running";
+}
+
+/** 360 → '6:00'. */
+export function formatPace(secPerKm: number): string {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Minutos totales de una carrera, derivados de distancia y ritmo. */
+export function runDurationMin(w: WorkoutLog): number | undefined {
+  if (w.distance_km == null || w.pace_sec_per_km == null) return undefined;
+  return (w.distance_km * w.pace_sec_per_km) / 60;
+}
+
+/** '52 min' o '1 h 12 min'. */
+export function formatMinutes(min: number): string {
+  const total = Math.round(min);
+  if (total < 60) return `${total} min`;
+  return `${Math.floor(total / 60)} h ${String(total % 60).padStart(2, "0")} min`;
 }
 
 /** Un día cuenta como "completo" si tiene peso y al menos proteína o kcal. */

@@ -26,10 +26,8 @@ export const viewport: Viewport = {
   // Necesario para que el contenido llegue bajo la barra de gestos del iPhone
   // y podamos compensarla con env(safe-area-inset-*).
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0d10" },
-  ],
+  // Un solo color: la app es oscura pase lo que pase con el tema del sistema.
+  themeColor: "#0e0b08",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

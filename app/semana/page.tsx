@@ -150,7 +150,10 @@ export default function SemanaPage() {
                     key={w.id}
                     className="rounded-md bg-accent-soft px-1.5 py-0.5 text-[11px] font-semibold text-accent"
                   >
-                    {WORKOUT_SHORT[w.type]}
+                    {/* En running el dato útil es la distancia, no la etiqueta. */}
+                    {w.type === "running" && w.distance_km != null
+                      ? `${w.distance_km}K`
+                      : WORKOUT_SHORT[w.type]}
                   </span>
                 ))}
               </span>

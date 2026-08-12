@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url";
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 
-const BG = [11, 13, 16, 255];
-const FG = [52, 211, 153, 255];
+const BG = [14, 11, 8, 255];
+const FG = [251, 146, 60, 255];
 
 const CRC_TABLE = (() => {
   const t = new Int32Array(256);

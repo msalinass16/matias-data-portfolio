@@ -1,31 +1,29 @@
 @import "tailwindcss";
 
+/**
+ * Oscuro siempre, no solo cuando el sistema lo pide: la app se usa a las 6am y
+ * cambiar a blanco porque el iPhone amaneció en modo claro sería peor.
+ */
 :root {
-  --bg: #ffffff;
-  --surface: #f4f5f7;
-  --surface-2: #e9ebef;
-  --border: #dcdfe4;
-  --fg: #14171a;
-  --muted: #646c76;
-  --accent: #047857;
-  --accent-fg: #ffffff;
-  --accent-soft: #d6f2e5;
-  --warn: #b45309;
-}
+  color-scheme: dark;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0d10;
-    --surface: #16191f;
-    --surface-2: #21262e;
-    --border: #2c323b;
-    --fg: #eef1f5;
-    --muted: #98a2ae;
-    --accent: #34d399;
-    --accent-fg: #05261a;
-    --accent-soft: #123a2c;
-    --warn: #fbbf24;
-  }
+  --bg: #0e0b08;
+  --surface: #1a1512;
+  --surface-2: #262019;
+  --border: #33291f;
+  --fg: #f7f0e8;
+  --muted: #a3968a;
+  --accent: #fb923c;
+  --accent-fg: #2b1607;
+  --accent-soft: #3d2412;
+  --warn: #fbbf24;
+  /**
+   * Serie secundaria de los gráficos (el peso diario crudo). Es un gris FRÍO a
+   * propósito: el gris cálido de `--muted` queda a ΔE 14.8 del naranja, bajo el
+   * piso de 15 incluso con visión normal. Este llega a 20.4, y a 15.1 en
+   * protanopía.
+   */
+  --chart-2: #8b93a1;
 }
 
 @theme inline {
@@ -39,6 +37,7 @@
   --color-accent-fg: var(--accent-fg);
   --color-accent-soft: var(--accent-soft);
   --color-warn: var(--warn);
+  --color-chart-2: var(--chart-2);
 }
 
 html {

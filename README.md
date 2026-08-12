@@ -42,9 +42,15 @@ Atajos de fricción en **Hoy**:
 
 - Las **kcal se calculan solas** desde proteína/carbos/grasa (4/4/9). Si escribes las
   kcal a mano, manda tu número y deja de recalcularse ese día.
-- Un tap en el tipo de entreno lo marca como completado y despliega RPE y duración.
-  Otro tap lo borra.
+- **Fuerza**: Upper / Lower / Full body. Un tap marca la sesión y despliega la duración;
+  otro tap la borra.
+- **Running** va aparte: distancia con slider y ritmo en min/km. El **tiempo total se
+  deriva** de ambos, así que no hay que escribirlo.
 - Ánimo, sueño y notas van colapsados: no estorban si no los usas.
+
+La app es **oscura siempre**, no solo cuando el sistema está en modo oscuro: se usa a
+primera hora de la mañana y ponerse blanca porque el teléfono amaneció en modo claro
+sería peor.
 
 ## Desarrollo
 
